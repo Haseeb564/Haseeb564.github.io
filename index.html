@@ -18,7 +18,10 @@
     <nav class="nav">
       <a href="#about">about</a>
       <a href="#projects">projects</a>
+      <a href="#experience">experience</a>
+      <a href="#homelab">homelab</a>
       <a href="#stack">stack</a>
+      <a href="#now">now</a>
       <a href="#notes">notes</a>
       <a href="#contact">contact</a>
     </nav>
@@ -28,10 +31,10 @@
     <!-- ASCII / Banner -->
     <section class="card" id="about">
       <pre class="ascii">
- _   _                     _       ____       _           _   
-| | | | __ _ ___  ___  ___| |__   |  _ \ __ _| |__   __ _| |_ 
+ _   _                     _       ____       _           _
+| | | | __ _ ___  ___  ___| |__   |  _ \ __ _| |__   __ _| |_
 | |_| |/ _` / __|/ _ \/ _ \ '_ \  | |_) / _` | '_ \ / _` | __|
-|  _  | (_| \__ \  __/  __/ |_) | |  _ < (_| | | | | (_| | |_ 
+|  _  | (_| \__ \  __/  __/ |_) | |  _ < (_| | | | | (_| | |_
 |_| |_|\__,_|___/\___|\___|_.__/  |_| \_\__,_|_| |_|\__,_|\__|
 
         (early linux homepage)  ::  no trackers  ::  plain html/css
@@ -54,9 +57,9 @@
         <div>
           <h3>quick links</h3>
           <ul class="bullets">
-            <li><a href="assets/CV.pdf">CV.pdf</a> <span class="muted"></span></li>
-            <li><a href="https://github.com/Haseeb564" rel="me">github</a> <span class="muted"></span></li>
-            <li><a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" rel="me">linkedin</a> <span class="muted"></span></li>
+            <li><a href="assets/CV.pdf">CV.pdf</a></li>
+            <li><a href="https://github.com/Haseeb564" rel="me">github</a></li>
+            <li><a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" rel="me">linkedin</a></li>
           </ul>
         </div>
 
@@ -122,8 +125,8 @@ bugs: acknowledged
               <ul class="bullets">
                 <li><strong>OS:</strong> Linux server setup (headless-friendly)</li>
                 <li><strong>Storage:</strong> organized library folders, permissions, backups, disk health checks</li>
-                <li><strong>Media stack:</strong> a media server app + clients on TV/phone/laptop</li>
-                <li><strong>Networking:</strong> local DNS / static IP, router config, remote access considerations</li>
+                <li><strong>Media stack:</strong> media server app + clients on TV/phone/laptop</li>
+                <li><strong>Networking:</strong> static IP, router config, remote access considerations</li>
                 <li><strong>Security:</strong> strong auth, minimal exposed ports, updates, basic hardening</li>
                 <li><strong>Automation:</strong> scheduled scans, maintenance scripts, monitoring</li>
               </ul>
@@ -137,11 +140,10 @@ bugs: acknowledged
           <p class="tags">tags: linux, self-hosting, networking, reliability, homelab</p>
         </article>
 
-        <!-- extra SWE-friendly projects -->
         <article class="item">
-          <h3>Inventory Reporting & Analytics Dashboard <span class="pill subtle">concept/portfolio</span></h3>
+          <h3>Inventory Reporting & Analytics Dashboard <span class="pill subtle">concept</span></h3>
           <p>
-            A lightweight dashboard concept for daily-updated inventory reporting aimed at execs/team leads:
+            A dashboard concept for daily-updated inventory reporting aimed at execs/team leads:
             trends, stock risk, slow movers, and exceptions.
           </p>
           <p class="tags">tags: analytics, dashboards, sql, product-thinking</p>
@@ -150,7 +152,8 @@ bugs: acknowledged
         <article class="item">
           <h3>Developer Tools / Scripts Pack <span class="pill subtle">ongoing</span></h3>
           <p>
-            Small utilities that save time: log parsers, backup helpers, environment bootstrapping, and “one command setup” scripts.
+            Small utilities that save time: backup helpers, environment bootstrapping, log parsers,
+            and “one command setup” scripts.
           </p>
           <p class="tags">tags: scripting, tooling, automation, linux</p>
         </article>
@@ -158,12 +161,88 @@ bugs: acknowledged
         <article class="item">
           <h3>API + Auth Starter (Portfolio Template) <span class="pill subtle">recommended</span></h3>
           <p>
-            A clean, deployable starter backend with authentication, roles, and CRUD.
+            A clean backend starter with authentication, roles, CRUD, basic validation, and a test skeleton.
             Great as a “proof I can ship production-ish code” repo.
           </p>
           <p class="tags">tags: backend, auth, rest, testing, deployment</p>
         </article>
       </div>
+    </section>
+
+    <!-- Experience -->
+    <section class="card" id="experience">
+      <h2>experience/</h2>
+      <p class="muted">What I can do (shown through building real things).</p>
+
+      <div class="list">
+        <article class="item">
+          <h3>backend + database design</h3>
+          <ul class="bullets">
+            <li>Design schemas with constraints, indexes, and clean relationships</li>
+            <li>Use procedures/triggers when automation + consistency matter</li>
+            <li>Write query/report views for “real usage” (sorting, filters, edge cases)</li>
+          </ul>
+          <p class="tags">signals: data integrity, maintainability, performance awareness</p>
+        </article>
+
+        <article class="item">
+          <h3>systems mindset (linux + reliability)</h3>
+          <ul class="bullets">
+            <li>Self-host services with stable networking and predictable storage</li>
+            <li>Think in uptime: backups, monitoring, updates, and rollback plans</li>
+            <li>Prefer simple solutions over fragile complexity</li>
+          </ul>
+          <p class="tags">signals: ownership, troubleshooting, ops basics</p>
+        </article>
+
+        <article class="item">
+          <h3>game systems engineering</h3>
+          <ul class="bullets">
+            <li>Combat systems: stamina, invulnerability frames, movement feel</li>
+            <li>Data-driven design: weapons/skills as configurable modules</li>
+            <li>AI plans using state machines for enemies + bosses</li>
+          </ul>
+          <p class="tags">signals: iteration, gameplay polish, architecture thinking</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Homelab -->
+    <section class="card" id="homelab">
+      <h2>homelab/</h2>
+      <p class="muted">My home media server, mapped like a system diagram.</p>
+
+      <pre class="pre">
+                [ Phone ]      [ Laptop ]      [ TV / Console ]
+                    |              |                |
+                    +--------------+----------------+
+                                   |
+                              (Home Wi-Fi)
+                                   |
+                              [ Router ]
+                                   |
+                           static IP / DHCP reservation
+                                   |
+                          +-------------------+
+                          |  Linux Server PC  |
+                          |-------------------|
+                          | Media service     |
+                          | Library folders   |
+                          | Users/auth        |
+                          | Scheduled scans   |
+                          | Backups/health    |
+                          +-------------------+
+                                   |
+                          [ HDD / SSD storage ]
+      </pre>
+
+      <ul class="bullets">
+        <li><strong>Goal:</strong> simple, stable streaming across devices</li>
+        <li><strong>Reliability:</strong> tidy folder structure, permissions, backup habit</li>
+        <li><strong>Security:</strong> minimal exposure, strong passwords, keep updates sane</li>
+      </ul>
+
+      <p class="muted">Next idea: add monitoring + a tiny status page.</p>
     </section>
 
     <!-- Stack -->
@@ -195,6 +274,18 @@ Linux linuxbox 6.x.x #1 SMP PREEMPT x86_64 GNU/Linux
       </pre>
     </section>
 
+    <!-- Now -->
+    <section class="card" id="now">
+      <h2>now/</h2>
+      <p class="muted">What I’m focused on right now.</p>
+      <ul class="bullets">
+        <li>Building the Godot combat loop (weapons + stamina + enemy AI)</li>
+        <li>Improving database-backed app structure + writing cleaner queries</li>
+        <li>Keeping the home server stable (storage + updates + automation)</li>
+      </ul>
+      <p class="muted">If you’re hiring, the fastest way to assess me is: check my GitHub.</p>
+    </section>
+
     <!-- Notes -->
     <section class="card" id="notes">
       <h2>notes/</h2>
@@ -211,10 +302,14 @@ Linux linuxbox 6.x.x #1 SMP PREEMPT x86_64 GNU/Linux
       <h2>contact/</h2>
       <p>Preferred: email. Also reachable on GitHub.</p>
       <ul class="bullets">
-        <li>Email: <a href="mailto:hrahat99@gmail.com">E-Mail</a> <span class="muted">(replace)</span></li>
-        <li>GitHub: <a href="https://github.com/Haseeb564">@Haseeb564</a> <span class="muted">(replace)</span></li>
-        <li>LinkedIn: <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376//">/Haseeb Rahat</a> <span class="muted">(replace)</span></li>
+        <li>Email: <a href="mailto:hrahat99@gmail.com">hrahat99@gmail.com</a></li>
+        <li>GitHub: <a href="https://github.com/Haseeb564">@Haseeb564</a></li>
+        <li>LinkedIn: <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/">Haseeb Rahat</a></li>
       </ul>
+
+      <p class="muted">
+        <a href="https://github.com/Haseeb564" rel="me">view source</a> (repos pinned on GitHub)
+      </p>
 
       <details>
         <summary>bonus: linux penguin</summary>
