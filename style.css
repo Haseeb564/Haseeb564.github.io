@@ -275,3 +275,70 @@ kbd{
   to { visibility: hidden; }
 }
 
+/* Improve anchor jumps with sticky header */
+:target{
+  scroll-margin-top: 110px; /* prevents headings hiding under sticky nav */
+}
+
+/* Details / summary polish */
+summary{
+  list-style: none;
+  user-select: none;
+  padding: 6px 10px;
+  border: 1px dashed rgba(143,211,143,0.35);
+  border-radius: 10px;
+  display: inline-block;
+}
+summary::-webkit-details-marker{ display: none; }
+summary::before{
+  content: "▶ ";
+  color: var(--muted);
+}
+details[open] summary::before{
+  content: "▼ ";
+}
+details .details{
+  margin-top: 10px;
+}
+
+/* Make long code/diagrams prettier */
+.pre{
+  tab-size: 2;
+}
+
+/* Optional: keyboard / keycaps */
+kbd{
+  font-family: inherit;
+  font-size: 0.95em;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(143,211,143,0.35);
+  background: rgba(0,0,0,0.20);
+  color: var(--text);
+}
+
+/* Optional: command output block (for experience/homelab/now sections) */
+.cmdout{
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(143,211,143,0.35);
+  background: rgba(0,0,0,0.22);
+  overflow: auto;
+}
+
+/* Optional: blinking cursor for terminal vibes */
+.cursor{
+  display: inline-block;
+  width: 10px;
+  margin-left: 6px;
+  background: var(--accent);
+  height: 1em;
+  vertical-align: -2px;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink{
+  to { visibility: hidden; }
+}
+
+
