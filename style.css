@@ -204,3 +204,7 @@ body::after{
   mix-blend-mode: overlay;
   opacity: 0.25;
 }
+
+.nav a{
+  white-space: nowrap;
+}
