@@ -1,134 +1,245 @@
-<!DOCTYPE HTML>
-<html>
-	<head>
-		<title>My Personal Profile</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
-	</head>
-	<body class="is-preload">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Haseeb Rahat — ~/home</title>
+  <meta name="description" content="Haseeb Rahat — software engineer. Projects, notes, contact. Early Linux homepage style." />
+  <link rel="stylesheet" href="style.css" />
+</head>
 
-		<!-- Wrapper-->
-			<div id="wrapper">
+<body>
+  <header class="topbar">
+    <div class="prompt">
+      <span class="host">haseeb@linuxbox</span><span class="sep">:</span><span class="path">~</span><span class="sep">$</span>
+      <span class="cmd">neofetch</span>
+    </div>
 
-				<!-- Nav -->
-					<nav id="nav">
-						<a href="#" class="icon solid fa-home"><span>Home</span></a>
-						<a href="#work" class="icon solid fa-folder"><span>Projects</span></a>
-						<a href="#contact" class="icon solid fa-envelope"><span>Work</span></a>
-						<a href="https://github.com/Haseeb564" class="icon brands fa-github"><span>Github</span></a>
-					</nav>
+    <nav class="nav">
+      <a href="#about">about</a>
+      <a href="#projects">projects</a>
+      <a href="#stack">stack</a>
+      <a href="#notes">notes</a>
+      <a href="#contact">contact</a>
+    </nav>
+  </header>
 
-				<!-- Main -->
-					<div id="main">
+  <main class="container">
+    <!-- ASCII / Banner -->
+    <section class="card" id="about">
+      <pre class="ascii">
+ _   _                     _       ____       _           _   
+| | | | __ _ ___  ___  ___| |__   |  _ \ __ _| |__   __ _| |_ 
+| |_| |/ _` / __|/ _ \/ _ \ '_ \  | |_) / _` | '_ \ / _` | __|
+|  _  | (_| \__ \  __/  __/ |_) | |  _ < (_| | | | | (_| | |_ 
+|_| |_|\__,_|___/\___|\___|_.__/  |_| \_\__,_|_| |_|\__,_|\__|
 
-						<!-- Me -->
-							<article id="home" class="panel intro">
-								<header>
-									<h1>Haseeb Rahat</h1>
-									<p>Software Engineer</p>
-								</header>
-								<a href="#work" class="jumplink pic">
-									<img src="images/me.jpg" alt="" />
-								</a>
-							</article>
+        (early linux homepage)  ::  no trackers  ::  plain html/css
+      </pre>
 
-						<!-- Work -->
-							<article id="work" class="panel">
-								<header>
-									<h2>Hobbies and Side Projects</h2>
-								</header>
-								<p>
-									Here are some of my hobbies and side projects.
-								</p>
-								<section>
-									<div class="row">
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic01.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic02.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic03.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic04.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic05.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic06.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic07.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic08.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic09.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic10.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic11.jpg" alt=""></a>
-										</div>
-										<div class="col-4 col-6-medium col-12-small">
-											<a href="#" class="image fit"><img src="images/pic12.jpg" alt=""></a>
-										</div>
-									</div>
-								</section>
-							</article>
+      <div class="banner">
+        <span class="badge">USER</span> <span class="accent">Haseeb Rahat</span>
+        <span class="sep2">|</span>
+        <span class="muted">software engineer • games • systems • databases</span>
+      </div>
 
-						<!-- Contact -->
-							<article id="contact" class="panel">
-								<header>
-									<h2>Contact Me.</h2>
-								</header>
-								<form action="#" method="post">
-									<div>
-										<div class="row">
-											<div class="col-6 col-12-medium">
-												<input type="text" name="name" placeholder="Name" />
-											</div>
-											<div class="col-6 col-12-medium">
-												<input type="text" name="email" placeholder="Email" />
-											</div>
-											<div class="col-12">
-												<input type="text" name="subject" placeholder="Subject" />
-											</div>
-											<div class="col-12">
-												<textarea name="message" placeholder="Message" rows="6"></textarea>
-											</div>
-											<div class="col-12">
-												<input type="submit" value="Send Message" />
-											</div>
-										</div>
-									</div>
-								</form>
-							</article>
+      <p class="muted">Last updated: <time datetime="2026-01-26">2026-01-26</time></p>
 
-					</div>
+      <p>
+        Hi, I’m <strong>Haseeb Rahat</strong>. I build practical software, learn fast, and enjoy projects that mix
+        <strong>systems</strong>, <strong>databases</strong>, and <strong>game dev</strong>. I like Linux, clean tooling, and shipping.
+      </p>
 
-				<!-- Footer -->
-					<div id="footer">
-						<ul class="copyright">
-							<li>&copy; Haseeb.</li><li>Design: <a href="https://x.com/Haseeb_rahat">Haseeb564</a></li>
-						</ul>
-					</div>
+      <div class="two-col">
+        <div>
+          <h3>quick links</h3>
+          <ul class="bullets">
+            <li><a href="assets/files/CV.pdf">CV.pdf</a> <span class="muted">(add later)</span></li>
+            <li><a href="https://github.com/Haseeb564" rel="me">github</a> <span class="muted">(update link)</span></li>
+            <li><a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" rel="me">linkedin</a> <span class="muted">(update link)</span></li>
+          </ul>
+        </div>
 
-			</div>
+        <div>
+          <h3>status</h3>
+          <pre class="pre">
+$ whoami
+haseeb
 
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
+$ uptime
+coffee: online
+builds: in progress
+bugs: acknowledged
+          </pre>
+        </div>
+      </div>
+    </section>
 
-	</body>
+    <!-- Projects -->
+    <section class="card" id="projects">
+      <h2>projects/</h2>
+      <p class="muted">A few things I’m building (and a few that are good “software engineer” staples).</p>
+
+      <div class="list">
+        <article class="item">
+          <h3>2D Monster Hunter–style game (Godot) <span class="pill">in progress</span></h3>
+          <p>
+            A top-down action game inspired by Monster Hunter / soulslike combat feel.
+            Focus areas: tight movement, stamina management, dodge/roll i-frames, weapon variety, bosses, and co-op readiness.
+          </p>
+          <ul class="bullets">
+            <li>Core: movement controller, stamina/regen, roll, hitboxes/hurtboxes</li>
+            <li>Combat plan: light/heavy melee, ranged, mage, summoner-style cooldown summons</li>
+            <li>Next: modular weapon system + animations + enemy AI states</li>
+          </ul>
+          <p class="tags">tags: godot, gamedev, combat-systems, state-machines</p>
+        </article>
+
+        <article class="item">
+          <h3>Online Library Store (Java + MySQL)</h3>
+          <p>
+            A database-driven application with structured SQL (tables, views, stored procedures, triggers) and a Java client.
+            Built to be maintainable: clear schema, clean queries, and audit-friendly operations.
+          </p>
+          <ul class="bullets">
+            <li>Features: order scheduling, inventory logic, query/report views</li>
+            <li>DB: procedures + triggers for consistency and automation</li>
+            <li>App: Java connectivity + input prompts + result display</li>
+          </ul>
+          <p class="tags">tags: java, mysql, sql, jdbc, backend</p>
+        </article>
+
+        <article class="item">
+          <h3>Home Media Server (spare PC) — Music + Movies + Streaming</h3>
+          <p>
+            I repurposed a spare computer into a personal server to host my media library and stream it across devices at home.
+            The goal is “set it up once, keep it stable, and access it anywhere”.
+          </p>
+
+          <details>
+            <summary>more details (setup + what I learned)</summary>
+            <div class="details">
+              <ul class="bullets">
+                <li><strong>OS:</strong> Linux server setup (headless-friendly)</li>
+                <li><strong>Storage:</strong> organized library folders, permissions, backups, disk health checks</li>
+                <li><strong>Media stack:</strong> a media server app + clients on TV/phone/laptop</li>
+                <li><strong>Networking:</strong> local DNS / static IP, router config, remote access considerations</li>
+                <li><strong>Security:</strong> strong auth, minimal exposed ports, updates, basic hardening</li>
+                <li><strong>Automation:</strong> scheduled scans, maintenance scripts, monitoring</li>
+              </ul>
+              <p class="muted">
+                The interesting part wasn’t just installing software — it was making it reliable:
+                permissions, predictable networking, stable services, and not breaking it during updates.
+              </p>
+            </div>
+          </details>
+
+          <p class="tags">tags: linux, self-hosting, networking, reliability, homelab</p>
+        </article>
+
+        <!-- extra SWE-friendly projects -->
+        <article class="item">
+          <h3>Inventory Reporting & Analytics Dashboard <span class="pill subtle">concept/portfolio</span></h3>
+          <p>
+            A lightweight dashboard concept for daily-updated inventory reporting aimed at execs/team leads:
+            trends, stock risk, slow movers, and exceptions.
+          </p>
+          <p class="tags">tags: analytics, dashboards, sql, product-thinking</p>
+        </article>
+
+        <article class="item">
+          <h3>Developer Tools / Scripts Pack <span class="pill subtle">ongoing</span></h3>
+          <p>
+            Small utilities that save time: log parsers, backup helpers, environment bootstrapping, and “one command setup” scripts.
+          </p>
+          <p class="tags">tags: scripting, tooling, automation, linux</p>
+        </article>
+
+        <article class="item">
+          <h3>API + Auth Starter (Portfolio Template) <span class="pill subtle">recommended</span></h3>
+          <p>
+            A clean, deployable starter backend with authentication, roles, and CRUD.
+            Great as a “proof I can ship production-ish code” repo.
+          </p>
+          <p class="tags">tags: backend, auth, rest, testing, deployment</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Stack -->
+    <section class="card" id="stack">
+      <h2>stack/</h2>
+      <div class="two-col">
+        <div>
+          <h3>comfortable with</h3>
+          <ul class="bullets">
+            <li>Java, SQL / MySQL, JDBC</li>
+            <li>Linux basics, CLI workflows</li>
+            <li>Godot (2D), game systems coding</li>
+            <li>Git / GitHub</li>
+          </ul>
+        </div>
+        <div>
+          <h3>currently leveling</h3>
+          <ul class="bullets">
+            <li>system design + backend patterns</li>
+            <li>testing (unit/integration) + CI</li>
+            <li>deployment + server hardening</li>
+            <li>performance profiling</li>
+          </ul>
+        </div>
+      </div>
+      <pre class="pre">
+$ uname -a
+Linux linuxbox 6.x.x #1 SMP PREEMPT x86_64 GNU/Linux
+      </pre>
+    </section>
+
+    <!-- Notes -->
+    <section class="card" id="notes">
+      <h2>notes/</h2>
+      <p class="muted">Placeholders you can turn into real pages later.</p>
+      <ul class="bullets">
+        <li><a href="#">Designing a weapon system in Godot (data-driven approach)</a></li>
+        <li><a href="#">MySQL procedures/triggers for audit-friendly apps</a></li>
+        <li><a href="#">Self-hosting: stability checklist (updates, backups, monitoring)</a></li>
+      </ul>
+    </section>
+
+    <!-- Contact -->
+    <section class="card" id="contact">
+      <h2>contact/</h2>
+      <p>Preferred: email. Also reachable on GitHub.</p>
+      <ul class="bullets">
+        <li>Email: <a href="mailto:hrahat99@gmail.com">hrahat99@gmail.com</a> <span class="muted">(replace)</span></li>
+        <li>GitHub: <a href="https://github.com/Haseeb564">@Haseeb564</a> <span class="muted">(replace)</span></li>
+        <li>LinkedIn: <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376//">/in/haseeb-rahat-1ab870376/</a> <span class="muted">(replace)</span></li>
+      </ul>
+
+      <details>
+        <summary>bonus: linux penguin</summary>
+        <pre class="pre">
+   .--.
+  |o_o |
+  |:_/ |
+ //   \ \
+(|     | )
+/'\_   _/`\
+\___)=(___/
+        </pre>
+      </details>
+    </section>
+
+    <footer class="footer">
+      <p class="muted">
+        © <span id="year"></span> Haseeb Rahat — built with HTML + CSS. no frameworks. no drama.
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
 </html>
+
