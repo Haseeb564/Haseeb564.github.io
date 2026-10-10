@@ -1,1056 +1,1147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Haseeb Rahat</title>
-  <meta name="description" content="Haseeb Rahat — software engineer. Systems, databases, game dev." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:            #05060e;
-      --surface:       rgba(255,255,255,0.038);
-      --surface-hi:    rgba(255,255,255,0.065);
-      --border:        rgba(255,255,255,0.075);
-      --border-hi:     rgba(255,255,255,0.16);
-      --text:          #f0f0f7;
-      --sub:           rgba(240,240,247,0.55);
-      --muted:         rgba(240,240,247,0.32);
-      --blue:          #4f80ff;
-      --blue-dim:      rgba(79,128,255,0.14);
-      --purple:        #9b72f8;
-      --purple-dim:    rgba(155,114,248,0.12);
-      --green:         #2dd4a4;
-      --green-dim:     rgba(45,212,164,0.12);
-      --r:             20px;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── dot grid sits above the WebGL gradient canvas ── */
-    body::after {
-      content: '';
-      position: fixed; inset: 0; z-index: 1;
-      background-image: radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px);
-      background-size: 28px 28px;
-      pointer-events: none;
-    }
-
-    /* WebGL gradient canvas (injected by JS) */
-    #gradient-canvas {
-      position: fixed; inset: 0; z-index: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-    }
-
-    /* ════════════════════════════════
-       NAV
-    ════════════════════════════════ */
-    .nav-outer {
-      position: fixed;
-      top: 16px; left: 50%;
-      transform: translateX(-50%);
-      z-index: 300;
-      width: calc(100% - 32px);
-      max-width: 900px;
-    }
-
-    nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 11px 20px;
-      background: rgba(5,6,14,0.72);
-      backdrop-filter: blur(32px) saturate(180%);
-      -webkit-backdrop-filter: blur(32px) saturate(180%);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset,
-                  0 8px 32px rgba(0,0,0,0.45);
-    }
-
-    .nav-brand {
-      font-size: 14px; font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text); text-decoration: none;
-    }
-
-    .nav-links { display: flex; gap: 2px; list-style: none; }
-
-    .nav-links a {
-      display: block; padding: 5px 12px;
-      font-size: 12.5px; font-weight: 450;
-      color: var(--muted); text-decoration: none;
-      border-radius: 9px;
-      transition: color .15s, background .15s;
-    }
-
-    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
-
-    @media (max-width: 600px) { .nav-links { display: none; } }
-
-    /* ════════════════════════════════
-       HERO  (full viewport height)
-    ════════════════════════════════ */
-    .hero {
-      position: relative; z-index: 2;
-      min-height: 100svh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 100px 24px 80px;
-      gap: 0;
-    }
-
-    /* Centered glow behind the name */
-    .hero-glow {
-      position: absolute;
-      width: 600px; height: 300px;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -60%);
-      background: radial-gradient(ellipse at center,
-        rgba(79,128,255,0.12) 0%, transparent 70%);
-      filter: blur(40px);
-      pointer-events: none;
-    }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 7px;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--blue);
-      padding: 5px 14px;
-      background: var(--blue-dim);
-      border: 1px solid rgba(79,128,255,0.22);
-      border-radius: 100px;
-      margin-bottom: 28px;
-    }
-
-    .hero-badge::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--blue);
-      box-shadow: 0 0 8px var(--blue);
-    }
-
-    .hero-name {
-      font-size: clamp(52px, 11vw, 104px);
-      font-weight: 800;
-      letter-spacing: -0.045em;
-      line-height: .95;
-      margin-bottom: 20px;
-
-      /* gradient fill */
-      background: linear-gradient(160deg, #ffffff 30%, rgba(240,240,247,0.5) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-role {
-      font-size: clamp(15px, 2.2vw, 18px);
-      font-weight: 400;
-      color: var(--muted);
-      letter-spacing: 0.02em;
-      margin-bottom: 22px;
-    }
-
-    .hero-bio {
-      font-size: 16px; line-height: 1.75;
-      color: var(--sub);
-      max-width: 460px;
-      margin: 0 auto 40px;
-    }
-
-    /* CTA container (liquid glass buttons mount here) */
-    #hero-cta {
-      display: flex; gap: 10px;
-      justify-content: center; flex-wrap: wrap;
-      min-height: 50px; align-items: center;
-    }
-
-    .btn {
-      display: inline-flex; align-items: center;
-      padding: 10px 20px;
-      font-size: 13.5px; font-weight: 500; font-family: inherit;
-      letter-spacing: -0.01em;
-      text-decoration: none; color: var(--text);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      backdrop-filter: blur(12px);
-      cursor: pointer;
-      transition: background .18s, border-color .18s;
-    }
-
-    .btn:hover { background: var(--surface-hi); border-color: var(--border-hi); }
-
-    /* Scroll hint */
-    .scroll-hint {
-      position: absolute; bottom: 32px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      color: var(--muted); font-size: 11px; letter-spacing: 0.1em;
-      text-transform: uppercase; text-decoration: none;
-      opacity: .6; transition: opacity .2s;
-    }
-
-    .scroll-hint:hover { opacity: 1; }
-
-    .scroll-arrow {
-      width: 1px; height: 36px;
-      background: linear-gradient(to bottom, transparent, var(--muted));
-      animation: scrollBob 1.8s ease-in-out infinite;
-    }
-
-    @keyframes scrollBob {
-      0%, 100% { transform: scaleY(1); opacity: .5; }
-      50%       { transform: scaleY(1.3); opacity: 1; }
-    }
-
-    /* ════════════════════════════════
-       PAGE WRAPPER
-    ════════════════════════════════ */
-    .page {
-      position: relative; z-index: 2;
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 0 20px 80px;
-    }
-
-    /* ════════════════════════════════
-       SECTION HEADING
-    ════════════════════════════════ */
-    .sec-label {
-      font-size: 10.5px; font-weight: 600;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-
-    /* ════════════════════════════════
-       CARDS  (shared)
-    ════════════════════════════════ */
-    .card {
-      position: relative;
-      background: rgba(5, 6, 14, 0.45);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      padding: 28px 28px;
-      backdrop-filter: blur(22px) saturate(160%);
-      -webkit-backdrop-filter: blur(22px) saturate(160%);
-      transition: border-color .25s, background .25s;
-
-      /* reveal animation: starts hidden */
-      opacity: 0;
-      transform: translateY(16px);
-    }
-
-    .card.visible {
-      opacity: 1; transform: translateY(0);
-      transition: opacity .5s ease, transform .5s ease,
-                  border-color .25s, background .25s;
-    }
-
-    .card:hover { background: rgba(5, 6, 14, 0.35); border-color: var(--border-hi); }
-
-    /* top-edge shimmer that picks up gradient colour */
-    .card::before {
-      content: '';
-      position: absolute; inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 40%);
-      pointer-events: none;
-    }
-
-    /* ════════════════════════════════
-       BENTO GRID
-    ════════════════════════════════ */
-    .bento {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: auto auto;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 700px) {
-      .bento { grid-template-columns: 1fr; }
-      .span2 { grid-column: 1 !important; }
-    }
-
-    .span2 { grid-column: span 2; }
-
-    /* Per-card accent tints */
-    .card-links  { --accent: var(--blue);   --accent-dim: var(--blue-dim);   }
-    .card-status { --accent: var(--green);  --accent-dim: var(--green-dim);  }
-    .card-now    { --accent: var(--purple); --accent-dim: var(--purple-dim); }
-    .card-stack  { --accent: var(--blue);   --accent-dim: var(--blue-dim);   }
-    .card-homelab{ --accent: var(--purple); --accent-dim: var(--purple-dim); }
-
-    /* ── card typography helpers ── */
-    .card-title {
-      font-size: 13px; font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--text);
-      margin-bottom: 16px;
-      display: flex; align-items: center; gap: 8px;
-    }
-
-    .card-title .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent);
-      flex-shrink: 0;
-    }
-
-    /* ── Quick links ── */
-    .link-stack { display: flex; flex-direction: column; gap: 8px; }
-
-    .link-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
-      background: rgba(255,255,255,0.025);
-      border: 1px solid rgba(255,255,255,0.055);
-      border-radius: 12px;
-      text-decoration: none;
-      transition: background .18s, border-color .18s;
-    }
-
-    .link-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
-
-    .link-row span { font-size: 13.5px; font-weight: 500; color: var(--text); }
-    .link-row .arr { font-size: 12px; color: var(--muted); }
-
-    /* ── Terminal block ── */
-    .term {
-      background: rgba(0,0,0,0.32);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 12px;
-      color: rgba(240,240,247,0.45);
-      line-height: 1.95;
-    }
-
-    .t-p { color: var(--blue); }
-    .t-v { color: rgba(240,240,247,0.8); }
-    .t-g { color: var(--green); }
-
-    /* ── Now items ── */
-    .now-items { display: flex; flex-direction: column; gap: 8px; }
-
-    .now-row {
-      display: flex; align-items: flex-start; gap: 10px;
-      font-size: 13px; color: var(--sub); line-height: 1.5;
-    }
-
-    .now-pip {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--purple); margin-top: 5px; flex-shrink: 0;
-      box-shadow: 0 0 8px var(--purple);
-    }
-
-    /* ── Stack chips ── */
-    .chip-grid { display: flex; flex-wrap: wrap; gap: 7px; }
-
-    .chip {
-      font-size: 11.5px; font-weight: 500;
-      padding: 4px 11px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 100px;
-      color: var(--sub);
-    }
-
-    .chip.active {
-      background: var(--blue-dim);
-      border-color: rgba(79,128,255,0.25);
-      color: #7da6ff;
-    }
-
-    .chip-section-title {
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 8px; margin-top: 14px;
-    }
-
-    .chip-section-title:first-child { margin-top: 0; }
-
-    /* ── Homelab diagram ── */
-    .diagram {
-      background: rgba(0,0,0,0.28);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 10px;
-      padding: 14px 14px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 10.5px; line-height: 1.7;
-      color: rgba(240,240,247,0.38);
-      white-space: pre; overflow-x: auto;
-    }
-
-    /* ════════════════════════════════
-       PROJECTS
-    ════════════════════════════════ */
-    .projects-section { margin-bottom: 12px; }
-
-    .section-head {
-      display: flex; align-items: baseline; gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .section-head h2 {
-      font-size: 20px; font-weight: 700;
-      letter-spacing: -0.03em;
-    }
-
-    .section-head .count {
-      font-size: 12px; color: var(--muted);
-      font-weight: 400;
-    }
-
-    .projects-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    @media (max-width: 640px) { .projects-grid { grid-template-columns: 1fr; } }
-
-    .proj {
-      display: flex; flex-direction: column;
-      gap: 10px;
-    }
-
-    .proj-num {
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    .proj-title {
-      font-size: 15.5px; font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text);
-    }
-
-    .proj-desc {
-      font-size: 13.5px; line-height: 1.65;
-      color: var(--sub);
-    }
-
-    .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; }
-
-    .tag {
-      font-size: 10.5px; font-weight: 500;
-      padding: 2px 8px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 100px;
-      color: var(--muted);
-    }
-
-    /* status pill inside project */
-    .pill {
-      display: inline-block;
-      font-size: 10px; font-weight: 600;
-      padding: 2px 9px; border-radius: 100px;
-      letter-spacing: 0.04em;
-    }
-
-    .pill-blue   { background: var(--blue-dim);   color: #7da6ff; border: 1px solid rgba(79,128,255,0.25); }
-    .pill-gray   { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid rgba(255,255,255,0.08); }
-    .pill-purple { background: var(--purple-dim); color: #c4a8fc; border: 1px solid rgba(155,114,248,0.25); }
-
-    /* ════════════════════════════════
-       EXPERIENCE
-    ════════════════════════════════ */
-    .exp-section { margin-bottom: 12px; }
-
-    .exp-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    @media (max-width: 640px) { .exp-grid { grid-template-columns: 1fr; } }
-
-    .exp-head {
-      font-size: 14px; font-weight: 600;
-      letter-spacing: -0.015em;
-      margin-bottom: 10px;
-    }
-
-    .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-
-    .bullet-list li {
-      font-size: 12.5px; color: var(--sub); line-height: 1.55;
-      padding-left: 14px; position: relative;
-    }
-
-    .bullet-list li::before {
-      content: '›';
-      position: absolute; left: 0;
-      color: var(--blue); font-size: 13px;
-    }
-
-    /* ════════════════════════════════
-       NOTES  +  CONTACT  (side by side)
-    ════════════════════════════════ */
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 640px) { .bottom-grid { grid-template-columns: 1fr; } }
-
-    .note-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-      background: rgba(255,255,255,0.025);
-      border: 1px solid rgba(255,255,255,0.055);
-      border-radius: 12px;
-      text-decoration: none; color: var(--sub);
-      font-size: 13px;
-      transition: all .18s; margin-bottom: 7px;
-    }
-
-    .note-item:last-child { margin-bottom: 0; }
-    .note-item .arr { color: var(--muted); font-size: 12px; flex-shrink: 0; margin-left: 8px; }
-    .note-item:hover { background: rgba(255,255,255,0.055); color: var(--text); border-color: var(--border-hi); }
-
-    .contact-item {
-      display: flex; align-items: center; gap: 14px;
-      padding: 13px 16px;
-      background: rgba(255,255,255,0.025);
-      border: 1px solid rgba(255,255,255,0.055);
-      border-radius: 12px;
-      text-decoration: none;
-      transition: all .18s; margin-bottom: 7px;
-    }
-
-    .contact-item:last-child { margin-bottom: 0; }
-
-    .contact-item:hover { background: rgba(255,255,255,0.055); border-color: var(--border-hi); }
-
-    .ck { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); min-width: 60px; }
-    .cv { font-size: 14px; font-weight: 500; color: var(--blue); letter-spacing: -0.01em; }
-
-    /* ════════════════════════════════
-       FOOTER
-    ════════════════════════════════ */
-    footer {
-      text-align: center;
-      padding: 40px 0 0;
-      font-size: 12px; color: var(--muted);
-      letter-spacing: -0.01em;
-    }
-
-    /* ════════════════════════════════
-       UTILITIES
-    ════════════════════════════════ */
-    [id] { scroll-margin-top: 84px; }
-
-    details summary {
-      cursor: pointer; font-size: 12.5px; color: var(--blue);
-      font-weight: 500; margin-top: 10px; list-style: none; user-select: none;
-    }
-
-    details summary::-webkit-details-marker { display: none; }
-    details[open] summary { margin-bottom: 8px; }
-
-    /* ── Hero load animation ── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .hero-badge { animation: fadeUp .6s .1s cubic-bezier(.22,1,.36,1) both; }
-    .hero-name  { animation: fadeUp .7s .2s cubic-bezier(.22,1,.36,1) both; }
-    .hero-role  { animation: fadeUp .6s .3s cubic-bezier(.22,1,.36,1) both; }
-    .hero-bio   { animation: fadeUp .6s .38s cubic-bezier(.22,1,.36,1) both; }
-    #hero-cta   { animation: fadeUp .6s .46s cubic-bezier(.22,1,.36,1) both; }
-    .scroll-hint{ animation: fadeUp .6s .8s cubic-bezier(.22,1,.36,1) both; }
-  </style>
-</head>
-<body>
-
-<!-- ════ NAV ════ -->
-<div class="nav-outer">
-  <nav>
-    <a href="#hero" class="nav-brand">Haseeb Rahat</a>
-    <ul class="nav-links">
-      <li><a href="#projects">Projects</a></li>
-      <li><a href="#experience">Experience</a></li>
-      <li><a href="#homelab">Homelab</a></li>
-      <li><a href="#stack">Stack</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
-  </nav>
-</div>
-
-<!-- ════ HERO ════ -->
-<section class="hero" id="hero">
-  <div class="hero-glow"></div>
-
-  <span class="hero-badge">Software Engineer</span>
-
-  <h1 class="hero-name">Haseeb Rahat</h1>
-
-  <p class="hero-role">systems &nbsp;·&nbsp; databases &nbsp;·&nbsp; game dev</p>
-
-  <p class="hero-bio">
-    I build practical software, learn fast, and enjoy projects that mix
-    systems, databases, and game development. Linux, clean tooling, shipping.
-  </p>
-
-  <div id="hero-cta">
-    <a href="assets/CV.pdf" class="btn">Download CV</a>
-    <a href="https://github.com/Haseeb564" class="btn">GitHub</a>
-    <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" class="btn">LinkedIn</a>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>[hidden]{display:none!important}</style>
+<title>Haseeb Rahat Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=JetBrains+Mono:wght@400;600&family=Schibsted+Grotesk:wght@400;500;700&family=Silkscreen&display=swap">
+<style>
+/* Layout: home is a full-bleed night collage of drifting "code specimens" under a giant serif name.
+   Work pages are a grey drafting sheet split by hairlines: index on the left, a reading line at 40%,
+   and a thumbnail strip on the right whose item crossing the line becomes the title. */
+:root{
+  /* home: one fixed look in every theme */
+  --night:#0a0a0c; --ash:#18181c; --bone:#e9e7e1; --peri:#6f71d2; --lime:#d6e05a;
+  /* drafting sheet: light */
+  --paper:#a8a9b1; --ink:#111116; --rule:rgba(17,17,22,.42); --mute:rgba(17,17,22,.64); --hi:#f7f7f3; --grain:.55;
+  --f-display:"Cormorant Garamond",Garamond,"Times New Roman",serif;
+  --f-ui:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --f-pixel:"Silkscreen","JetBrains Mono",monospace;
+  --line:40%; --g:clamp(16px,1.3vw,24px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --paper:#17181c; --ink:#dddcd6; --rule:rgba(221,220,214,.24); --mute:rgba(221,220,214,.58); --hi:#9fa1f7; --grain:.35; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --paper:#17181c; --ink:#dddcd6; --rule:rgba(221,220,214,.24); --mute:rgba(221,220,214,.58); --hi:#9fa1f7; --grain:.35; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--night);color:var(--bone);font-family:var(--f-ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+body.is-work{background:var(--paper);color:var(--ink)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:1px solid currentColor;outline-offset:3px}
+.fine{margin:0;font-size:9.5px;line-height:1.35;letter-spacing:.04em;font-weight:500;max-width:34ch}
+
+/* ---------- boot cover ---------- */
+.cover{position:fixed;inset:0;z-index:50;background:var(--night);color:var(--bone);font-family:var(--f-mono);font-size:12px;line-height:1.75;padding:clamp(16px,3vw,40px);display:flex;align-items:flex-end;cursor:pointer;transition:opacity .7s ease,visibility .7s}
+.cover.done{opacity:0;visibility:hidden}
+.cover pre{margin:0 0 4px;font:inherit;white-space:pre-wrap;color:color-mix(in srgb,var(--bone) 78%,transparent)}
+.cover pre b{color:var(--lime);font-weight:400}
+.cover .pct{position:absolute;right:clamp(16px,3vw,40px);bottom:clamp(10px,2vw,28px);font-family:var(--f-display);font-weight:300;font-size:clamp(72px,13vw,190px);line-height:.8;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+
+/* ---------- home ---------- */
+.home{position:fixed;inset:0;overflow:hidden;background:var(--night);color:var(--bone)}
+.home canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.home .ui{position:absolute;inset:0;text-shadow:0 0 14px var(--night),0 0 3px var(--night)}
+.mark{position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);margin:0;font-family:var(--f-display);font-weight:300;font-size:clamp(84px,21.5vw,420px);line-height:.82;letter-spacing:-.04em;color:color-mix(in srgb,var(--bone) 52%,transparent);white-space:nowrap;pointer-events:none;text-shadow:none;transition:opacity .5s}
+.mark .l{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .01em .03em}
+.mark i{display:inline-block;font-style:normal;transition:transform 1.2s cubic-bezier(.16,.8,.1,1);transition-delay:var(--d,0s)}
+.home.pre .mark i{transform:translateY(108%)}
+.home.peek .mark{opacity:.22}
+.home-id{position:absolute;left:clamp(16px,8.6vw,150px);top:47.5%;display:grid;gap:3px;margin:0;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.home-id span{font-weight:500;color:color-mix(in srgb,var(--bone) 70%,transparent)}
+.home-blurb{position:absolute;left:25.6%;top:47.5%;display:grid;gap:14px;max-width:34ch;font-size:10px;line-height:1.4;letter-spacing:.07em;text-transform:uppercase;font-weight:500}
+.home-blurb p{margin:0}
+.home-meta{text-transform:none;font-family:var(--f-mono);font-size:11px;letter-spacing:.02em;color:color-mix(in srgb,var(--bone) 78%,transparent);font-variant-numeric:tabular-nums}
+.home-nav{position:absolute;right:clamp(16px,3.4vw,56px);top:36.5%;display:grid;gap:.12em;font-size:clamp(17px,1.85vw,28px);font-weight:500;letter-spacing:.005em;line-height:1.05;text-transform:uppercase}
+.home-nav a{display:block;width:max-content;transition:transform .4s cubic-bezier(.2,.8,.2,1),color .3s}
+.home-nav a:hover,.home-nav a:focus-visible{transform:translateX(-.45em);color:var(--lime)}
+.home-nav small{font-family:var(--f-mono);font-size:.42em;vertical-align:super;margin-left:.3em;letter-spacing:0}
+.home .fine{position:absolute;right:clamp(16px,3.4vw,56px);bottom:clamp(16px,3.4vh,34px);color:color-mix(in srgb,var(--bone) 64%,transparent)}
+
+@media (max-width:820px){
+  .mark{top:43%;font-size:24.5vw}
+  .home-id{left:16px;top:calc(18px + env(safe-area-inset-top,0px))}
+  .home-blurb{left:16px;right:16px;top:auto;bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  .home-nav{left:16px;right:auto;top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));grid-auto-flow:column;gap:22px;font-size:22px}
+  .home-nav a:hover,.home-nav a:focus-visible{transform:translateY(-.15em)}
+  .home .fine{left:16px;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+}
+
+/* ---------- drafting sheet (projects / lab / info) ---------- */
+.work{position:relative;display:grid;grid-template-columns:33.5fr 41fr 25.5fr;height:100%;background:var(--paper);color:var(--ink)}
+.work::before{content:"";position:absolute;left:0;right:0;top:var(--line);border-top:1px solid var(--rule);pointer-events:none;z-index:1}
+.work::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;opacity:var(--grain);mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+.col{position:relative;min-width:0;border-right:1px solid var(--rule)}
+.col-r{border-right:0;overflow:hidden}
+.wm{position:absolute;left:var(--g);top:calc(var(--g) - 4px);font-family:var(--f-display);font-weight:300;font-size:clamp(26px,3.15vw,50px);line-height:.95;letter-spacing:-.012em;text-transform:uppercase;white-space:nowrap}
+.emblem{position:absolute;left:calc(var(--g) + 8%);top:clamp(74px,14vh,120px);width:clamp(58px,7.4vw,104px);height:auto;color:var(--ink)}
+.wnav{position:absolute;left:var(--g);top:calc(var(--line) - 26px);display:flex;gap:16px;font-size:12px;font-weight:700}
+.wnav a{transition:color .2s}
+.wnav a:hover,.wnav a[aria-current="page"]{color:var(--hi)}
+#draft{position:absolute;left:0;top:calc(var(--line) + 1px);width:100%;height:calc(100% - var(--line) - 1px);display:block}
+
+.filters{position:absolute;z-index:2;top:calc(var(--g) - 4px);right:calc(25.5% + var(--g));display:grid;justify-items:end;gap:2px;font-size:12px;font-weight:700}
+.filters button{transition:color .2s}
+.filters button:hover,.filters button[aria-pressed="true"]{color:var(--hi)}
+.r-head{position:absolute;left:var(--g);right:var(--g);bottom:calc(100% - var(--line) + 12px);transition:opacity .35s,transform .45s cubic-bezier(.2,.8,.2,1)}
+.r-kicker{display:block;margin-bottom:8px;font-family:var(--f-mono);font-size:11px;color:var(--mute);font-variant-numeric:tabular-nums}
+.r-title{margin:0;font-family:var(--f-display);font-weight:300;font-size:clamp(34px,3.6vw,62px);line-height:.92;letter-spacing:-.015em;text-wrap:balance}
+.r-body{position:absolute;left:var(--g);right:var(--g);top:calc(var(--line) + 12px);bottom:72px;overflow:auto;display:grid;align-content:start;gap:18px;transition:opacity .35s .05s,transform .45s .05s cubic-bezier(.2,.8,.2,1);scrollbar-width:thin}
+.swap .r-head,.swap .r-body{opacity:0;transform:translateY(8px);transition-duration:0s}
+.r-meta{margin:0;display:flex;flex-wrap:wrap;gap:.4em 1.1em;font-size:12px;font-weight:700}
+.r-desc{margin:0;max-width:46ch;font-size:15px;line-height:1.55;text-wrap:pretty}
+.r-stack{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--f-mono);font-size:11px;color:var(--mute)}
+.r-stack li::before{content:"› ";color:var(--ink)}
+.r-links{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;font-weight:700}
+.r-links:empty{display:none}
+.r-where{margin:-10px 0 0;font-family:var(--f-mono);font-size:11px;line-height:1.5;color:var(--mute)}
+.r-notes ol{margin:0;padding-left:1.5em;display:grid;gap:8px;max-width:54ch;font-size:13px;line-height:1.5}
+.r-notes li::marker{font-family:var(--f-mono);font-size:11px;color:var(--mute)}
+.work.is-info .col-c > .fine{display:none}
+.work.is-info .r-body{bottom:var(--g)}
+.r-links a{border-bottom:1px solid currentColor;padding-bottom:1px}
+.r-links a:hover{color:var(--hi)}
+.col-c > .fine{position:absolute;left:var(--g);bottom:var(--g);color:var(--mute)}
+
+.strip{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:10px;padding-right:var(--g);scrollbar-width:none;overscroll-behavior:contain}
+.strip::-webkit-scrollbar{display:none}
+.thumb{flex:none;display:block;width:min(100%,300px);aspect-ratio:16/10;max-width:100%;position:relative;opacity:.62;transition:opacity .3s,transform .45s cubic-bezier(.2,.8,.2,1)}
+.thumb canvas{display:block;width:100%;height:100%}
+.thumb:hover{opacity:.9}
+.thumb.on{opacity:1;transform:translateX(10px)}
+.thumb.on::after{content:"";position:absolute;left:-10px;top:50%;width:10px;border-top:1px solid var(--ink)}
+
+/* info mode */
+.strip.is-info{top:calc(var(--line) + 1px);gap:0;padding:12px var(--g) 40px;scrollbar-width:thin}
+.strip.is-info .label{margin-top:10px}
+.strip.is-info .stack-grid{padding-top:12px;border-top:1px solid var(--rule)}
+.xp{display:grid;gap:4px;padding:12px 0 14px;border-top:1px solid var(--rule)}
+.xp-years{font-family:var(--f-mono);font-size:11px;color:var(--mute);font-variant-numeric:tabular-nums}
+.xp-role{font-size:14px;font-weight:700}
+.xp-note{font-size:13px;line-height:1.45;color:var(--mute)}
+.label{margin:0 0 6px;font-family:var(--f-mono);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em}
+.stack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.stack-grid ul{margin:0;padding:0;list-style:none;font-size:13px;line-height:1.6}
+.contact{display:grid;gap:8px;font-size:13px}
+.contact-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.contact-row code{font-family:var(--f-mono);font-size:12px;user-select:all}
+.copy{font-size:11px;font-weight:700;border-bottom:1px solid currentColor}
+.copy:hover{color:var(--hi)}
+
+@media (max-width:820px){
+  body.is-work{overflow:auto}
+  .work{display:flex;flex-direction:column;height:auto;min-height:100%;padding-block:calc(14px + env(safe-area-inset-top,0px)) 28px}
+  .work::before{display:none}
+  .col{border:0}
+  .col-l{order:0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px 16px;padding:0 16px 14px;border-bottom:1px solid var(--rule)}
+  .wm,.wnav,.filters,.r-head,.r-body,.col-c > .fine{position:static}
+  .wm{font-size:30px;white-space:normal}
+  .emblem,#draft{display:none}
+  .filters{order:1;display:flex;flex-wrap:wrap;gap:6px 18px;padding:12px 16px}
+  .col-r{order:2;overflow:visible}
+  .strip{position:relative;flex-direction:row;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:4px 19vw 8px;gap:12px}
+  .thumb{width:62vw;scroll-snap-align:center}
+  .thumb.on{transform:translateY(-4px)}
+  .thumb.on::after{display:none}
+  .col-c{order:3;padding:20px 16px 0;display:grid;gap:14px}
+  .r-head{transform:none}
+  .r-body{overflow:visible}
+  .work.is-info .col-r{order:4}
+  .strip.is-info{top:auto;flex-direction:column;overflow:visible;padding:20px 16px 0}
+  .col-c > .fine{margin-top:18px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:0s!important;transition-delay:0s!important}
+}
+</style>
+
+<div class="cover" id="cover" aria-hidden="true"><pre id="boot"></pre><span class="pct" id="pct">000</span></div>
+
+<section class="home" id="home" aria-label="Home">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="ui">
+    <h1 class="mark" id="mark" aria-label="Haseeb Rahat"></h1>
+    <p class="home-id"><b id="hName">Haseeb Rahat</b><span id="hRole">Software Engineer</span></p>
+    <div class="home-blurb"><p id="hBlurb"></p><p class="home-meta" id="hMeta"></p></div>
+    <nav class="home-nav" aria-label="Sections">
+      <a href="#projects" data-outline="projects">Projects<small id="nP"></small></a>
+      <a href="#lab" data-outline="lab">Lab<small id="nL"></small></a>
+      <a href="#info" data-outline="info">Info</a>
+    </nav>
+    <p class="fine">Built with plain HTML, CSS and canvas.<br>No framework, no image files.</p>
   </div>
-
-  <a href="#grid" class="scroll-hint">
-    <span>scroll</span>
-    <div class="scroll-arrow"></div>
-  </a>
 </section>
 
-<!-- ════ CONTENT ════ -->
-<div class="page">
-
-  <!-- ── BENTO GRID ── -->
-  <div class="bento" id="grid">
-
-    <!-- Quick links -->
-    <div class="card card-links" id="about">
-      <div class="card-title"><span class="dot"></span> Quick links</div>
-      <div class="link-stack">
-        <a href="assets/CV.pdf" class="link-row">
-          <span>CV.pdf</span><span class="arr">↗</span>
-        </a>
-        <a href="https://github.com/Haseeb564" class="link-row" rel="me">
-          <span>GitHub</span><span class="arr">↗</span>
-        </a>
-        <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" class="link-row" rel="me">
-          <span>LinkedIn</span><span class="arr">↗</span>
-        </a>
-        <a href="mailto:hrahat99@gmail.com" class="link-row">
-          <span>Email</span><span class="arr">↗</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Terminal status -->
-    <div class="card card-status">
-      <div class="card-title"><span class="dot"></span> Status</div>
-      <div class="term">
-        <span class="t-p">$ </span><span class="t-v">whoami</span><br>
-        <span class="t-g">haseeb</span><br><br>
-        <span class="t-p">$ </span><span class="t-v">uptime</span><br>
-        coffee &nbsp;&nbsp;: <span class="t-g">online</span><br>
-        builds &nbsp;&nbsp;: <span class="t-v">in progress</span><br>
-        bugs &nbsp;&nbsp;&nbsp;&nbsp;: <span class="t-v">acknowledged</span><br><br>
-        <span class="t-p">$ </span><span class="t-v">location</span><br>
-        <span class="t-v">→ linux box, home office</span>
-      </div>
-    </div>
-
-    <!-- Now -->
-    <div class="card card-now" id="now">
-      <div class="card-title"><span class="dot"></span> Now</div>
-      <div class="now-items">
-        <div class="now-row"><div class="now-pip"></div>Building Godot combat loop — weapons, stamina, enemy AI</div>
-        <div class="now-row"><div class="now-pip"></div>Improving database-backed app structure + cleaner queries</div>
-        <div class="now-row"><div class="now-pip"></div>Keeping home server stable — storage, updates, automation</div>
-      </div>
-    </div>
-
-    <!-- Stack (spans 2 cols) -->
-    <div class="card card-stack span2" id="stack">
-      <div class="card-title"><span class="dot"></span> Stack</div>
-      <div class="chip-section-title">Comfortable with</div>
-      <div class="chip-grid">
-        <span class="chip active">Java</span>
-        <span class="chip active">SQL / MySQL</span>
-        <span class="chip active">JDBC</span>
-        <span class="chip active">Godot</span>
-        <span class="chip active">Linux</span>
-        <span class="chip active">Git</span>
-        <span class="chip active">CLI workflows</span>
-      </div>
-      <div class="chip-section-title">Currently leveling</div>
-      <div class="chip-grid">
-        <span class="chip">System design</span>
-        <span class="chip">Backend patterns</span>
-        <span class="chip">Unit / integration testing</span>
-        <span class="chip">CI/CD</span>
-        <span class="chip">Deployment</span>
-        <span class="chip">Server hardening</span>
-        <span class="chip">Performance profiling</span>
-      </div>
-    </div>
-
-    <!-- Homelab -->
-    <div class="card card-homelab" id="homelab">
-      <div class="card-title"><span class="dot"></span> Homelab</div>
-      <div class="diagram">[ Phone / Laptop / TV ]
-       |
-  (Home Wi-Fi)
-       |
-  [ Router ]
-       |
-+------------------+
-|  Linux Server    |
-|  Media service   |
-|  Library/auth    |
-|  Backups/health  |
-+------------------+
-       |
-[ HDD / SSD ]</div>
-      <div style="margin-top:12px; font-size:12.5px; color:var(--sub); line-height:1.65;">
-        Repurposed spare PC running a personal media server. Static IP, minimal exposure, scheduled maintenance scripts.
-      </div>
-    </div>
-
-  </div><!-- /bento -->
-
-  <!-- ── PROJECTS ── -->
-  <div class="projects-section" id="projects">
-    <div class="section-head">
-      <h2>Projects</h2>
-      <span class="count">6 things I've built</span>
-    </div>
-
-    <div class="projects-grid">
-
-      <div class="card proj">
-        <span class="proj-num">01</span>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="proj-title">2D Monster Hunter–style Game</span>
-          <span class="pill pill-blue">in progress</span>
-        </div>
-        <p class="proj-desc">Top-down action game in Godot. Focus: tight movement, stamina management, dodge/roll i-frames, weapon variety, bosses, co-op readiness.</p>
-        <div class="tag-row">
-          <span class="tag">godot</span><span class="tag">gamedev</span>
-          <span class="tag">combat-systems</span><span class="tag">state-machines</span>
-        </div>
-      </div>
-
-      <div class="card proj">
-        <span class="proj-num">02</span>
-        <span class="proj-title">Online Library Store</span>
-        <p class="proj-desc">Database-driven app with structured SQL — stored procedures, triggers, views — and a Java client. Built for maintainability and audit-friendliness.</p>
-        <div class="tag-row">
-          <span class="tag">java</span><span class="tag">mysql</span>
-          <span class="tag">sql</span><span class="tag">jdbc</span>
-        </div>
-      </div>
-
-      <div class="card proj">
-        <span class="proj-num">03</span>
-        <span class="proj-title">Home Media Server</span>
-        <p class="proj-desc">Repurposed spare PC for personal streaming. Static IP, strong auth, minimal ports, scheduled scans. Goal: set once, stay stable, access anywhere.</p>
-        <details>
-          <summary>→ Setup details</summary>
-          <ul class="bullet-list" style="margin-top:8px;">
-            <li>Headless Linux with organized library folders</li>
-            <li>Static IP + remote access config</li>
-            <li>Minimal exposed ports + scheduled backups</li>
-          </ul>
-        </details>
-        <div class="tag-row" style="margin-top:10px;">
-          <span class="tag">linux</span><span class="tag">self-hosting</span>
-          <span class="tag">networking</span>
-        </div>
-      </div>
-
-      <div class="card proj">
-        <span class="proj-num">04</span>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="proj-title">Inventory Reporting Dashboard</span>
-          <span class="pill pill-gray">concept</span>
-        </div>
-        <p class="proj-desc">Dashboard for daily-updated inventory reporting aimed at execs: trends, stock risk, slow movers, exceptions.</p>
-        <div class="tag-row">
-          <span class="tag">analytics</span><span class="tag">sql</span>
-          <span class="tag">product-thinking</span>
-        </div>
-      </div>
-
-      <div class="card proj">
-        <span class="proj-num">05</span>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="proj-title">Developer Tools / Scripts Pack</span>
-          <span class="pill pill-gray">ongoing</span>
-        </div>
-        <p class="proj-desc">Small utilities that save time: backup helpers, env bootstrapping, log parsers, one-command setup scripts.</p>
-        <div class="tag-row">
-          <span class="tag">scripting</span><span class="tag">automation</span>
-          <span class="tag">linux</span>
-        </div>
-      </div>
-
-      <div class="card proj">
-        <span class="proj-num">06</span>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="proj-title">API + Auth Starter</span>
-          <span class="pill pill-purple">recommended</span>
-        </div>
-        <p class="proj-desc">Clean backend starter: auth, roles, CRUD, validation, test skeleton. Proof of production-ready code you can actually ship.</p>
-        <div class="tag-row">
-          <span class="tag">backend</span><span class="tag">auth</span>
-          <span class="tag">rest</span><span class="tag">testing</span>
-        </div>
-      </div>
-
-    </div>
-  </div><!-- /projects -->
-
-  <!-- ── EXPERIENCE ── -->
-  <div class="exp-section" id="experience">
-    <div class="section-head">
-      <h2>Experience</h2>
-    </div>
-    <div class="exp-grid">
-      <div class="card">
-        <p class="exp-head">Backend + Database</p>
-        <ul class="bullet-list">
-          <li>Schemas with constraints, indexes, clean relationships</li>
-          <li>Procedures + triggers for automation and consistency</li>
-          <li>Query/report views built for real usage</li>
-        </ul>
-        <div class="tag-row" style="margin-top:14px;">
-          <span class="tag">data integrity</span><span class="tag">maintainability</span>
-        </div>
-      </div>
-      <div class="card">
-        <p class="exp-head">Systems + Linux</p>
-        <ul class="bullet-list">
-          <li>Self-host services with stable networking</li>
-          <li>Think in uptime: backups, monitoring, rollback</li>
-          <li>Prefer simple solutions over fragile complexity</li>
-        </ul>
-        <div class="tag-row" style="margin-top:14px;">
-          <span class="tag">ownership</span><span class="tag">reliability</span>
-        </div>
-      </div>
-      <div class="card">
-        <p class="exp-head">Game Systems</p>
-        <ul class="bullet-list">
-          <li>Combat: stamina, i-frames, movement feel</li>
-          <li>Data-driven design: weapons as configurable modules</li>
-          <li>State machines for enemies and boss AI</li>
-        </ul>
-        <div class="tag-row" style="margin-top:14px;">
-          <span class="tag">iteration</span><span class="tag">architecture</span>
-        </div>
-      </div>
-    </div>
+<section class="work" id="work" aria-label="Work" hidden>
+  <div class="col col-l">
+    <a class="wm" href="#" id="wm">Haseeb Rahat</a>
+    <svg class="emblem" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><circle cx="50" cy="50" r="38"/><circle cx="50" cy="50" r="31"/><rect x="37" y="37" width="26" height="26" transform="rotate(45 50 50)"/><path d="M36 36 20 50l16 14M64 36l16 14-16 14M57 24 43 76"/></svg>
+    <nav class="wnav" aria-label="Sections"><a href="#projects">Projects</a><a href="#lab">Lab</a><a href="#info">Info/Contact</a></nav>
+    <canvas id="draft" aria-hidden="true"></canvas>
   </div>
-
-  <!-- ── NOTES + CONTACT ── -->
-  <div class="bottom-grid">
-
-    <div class="card" id="notes">
-      <div class="card-title" style="--accent:var(--purple);"><span class="dot"></span> Notes</div>
-      <a href="#" class="note-item">Designing a weapon system in Godot (data-driven) <span class="arr">↗</span></a>
-      <a href="#" class="note-item">MySQL procedures/triggers for audit-friendly apps <span class="arr">↗</span></a>
-      <a href="#" class="note-item">Self-hosting: stability checklist <span class="arr">↗</span></a>
-    </div>
-
-    <div class="card" id="contact">
-      <div class="card-title" style="--accent:var(--green);"><span class="dot"></span> Contact</div>
-      <a href="mailto:hrahat99@gmail.com" class="contact-item">
-        <span class="ck">Email</span>
-        <span class="cv">hrahat99@gmail.com</span>
-      </a>
-      <a href="https://github.com/Haseeb564" class="contact-item">
-        <span class="ck">GitHub</span>
-        <span class="cv">@Haseeb564</span>
-      </a>
-      <a href="https://www.linkedin.com/in/haseeb-rahat-1ab870376/" class="contact-item">
-        <span class="ck">LinkedIn</span>
-        <span class="cv">Haseeb Rahat</span>
-      </a>
-      <p style="margin-top:16px; font-size:12.5px; color:var(--muted); line-height:1.6;">
-        If you're hiring, fastest assessment: <a href="https://github.com/Haseeb564" style="color:var(--blue);text-decoration:none;">check GitHub →</a>
-      </p>
-    </div>
-
+  <div class="filters" id="filters" role="group" aria-label="Filter by type"></div>
+  <div class="col col-c" id="reading">
+    <div class="r-head" id="rHead"></div>
+    <div class="r-body" id="rBody"></div>
+    <p class="fine">© 2026 Haseeb Rahat.<br>Built with plain HTML, CSS and canvas.</p>
   </div>
+  <div class="col col-r"><div class="strip" id="strip" aria-label="Project list"></div></div>
+</section>
 
-  <footer>
-    <p>© <span id="year"></span> Haseeb Rahat &nbsp;—&nbsp; built with HTML + CSS, no frameworks.</p>
-  </footer>
-
-</div><!-- /page -->
-
-<!-- ════ SHADER GRADIENT ════
-     Full-screen WebGL canvas that replicates the shadergradient.co effect:
-     4 slow-moving Gaussian colour blobs rendered in a GLSL fragment shader.
-     Cards sit above it with backdrop-filter, so each one frosts a different
-     slice of the gradient — same technique the library uses internally.
--->
 <script>
-(function () {
-  const canvas = document.createElement('canvas');
-  canvas.id = 'gradient-canvas';
-  document.body.prepend(canvas);
+(() => {
+/* =========================================================
+   CONTENT: edit these lists. Everything else reads from them.
+   ========================================================= */
+const SITE = {
+  name: "Haseeb Rahat",
+  mark: "HASEEB",                       // the giant word on the home page
+  role: "Software Engineer",
+  blurb: "Software engineer and First Class Honours graduate. I build practical software across systems, databases and game development.",
+  bio: "I'm a Software Engineering graduate with practical experience across the stack, from systems programming in C, C++ and Rust to Java back-end services, REST APIs and React front ends. I like building things from scratch, and right now I'm the sole developer of CodeCarbon, a dungeon crawler in Godot.",
+  degree: "BSc (Hons) Software Engineering, First Class",
+  where: "Manama, Bahrain · Golden Visa, no sponsorship needed · available now",
+  education: [
+    { years: "Final year", title: "BSc (Hons) Software Engineering", org: "Liverpool John Moores University, UK",
+      note: "First Class Honours, 77% average. Capstone: a multi-tier Java application with MVC, a relational database and a REST API." },
+    { years: "Years 1–2", title: "BSc Software Engineering", org: "Curtin University, Perth",
+      note: "Transferred to LJMU for the final year of the same degree." },
+  ],
+  email: "hrahat99@gmail.com",
+  links: [["GitHub", "https://github.com/Haseeb564"], ["LinkedIn", "https://www.linkedin.com/in/haseeb-rahat-1ab870376/"], ["CV (PDF)", "https://haseeb564.github.io/assets/CV.pdf"]],
+};
+const PROJECTS = [
+  { title: "CodeCarbon", kind: "Game", date: "Ongoing", cover: "dungeon",
+    summary: "A top-down dungeon crawler I'm building solo in Godot 4.5. Five player classes with swappable abilities, a 12-effect status engine, three enemy archetypes, bosses, and a new floor generated every run.",
+    notesTitle: "The hardest part: the floor generator",
+    notes: [
+      "Grows each floor as a graph. Every new room hangs off a free side of an existing room by a straight corridor, and rooms with the fewest exits are picked first so the map spreads out instead of trailing off one arm.",
+      "Lines up every corridor by solving for one doorway position that fits on both rooms' facing walls, snapped to the 32 px tile grid.",
+      "Rejects any room or corridor whose padded bounds would touch something already placed, and keeps trying until the floor reaches its 5 to 8 rooms.",
+      "Runs a breadth-first search over the corridor graph and puts the boss room as far from the entrance as it can, preferring dead ends.",
+    ],
+    stack: ["GDScript", "Godot 4.5", "Custom Resources", "Tween API"] },
+  { title: "Online Library Store", kind: "Backend", date: "Completed", cover: "schema",
+    summary: "A database-driven store with structured SQL: stored procedures, triggers and views, plus a Java client over JDBC. Built to be easy to maintain and easy to audit.",
+    stack: ["Java", "MySQL", "SQL", "JDBC"], source: "https://github.com/Haseeb564" },
+  { title: "Multi-tier Java App", kind: "Backend", date: "Final-year capstone", cover: "grid",
+    labels: ["view", "controller", "model"], caption: "MVC · relational database · REST API",
+    summary: "My capstone project: a multi-tier Java application showing MVC architecture, relational database integration and REST API design.",
+    stack: ["Java", "MVC", "SQL", "REST"] },
+  { title: "Client Web Apps", kind: "Web", date: "2023 – now", cover: "code",
+    summary: "Responsive websites and web apps for Code Experts clients, built in React and JavaScript and owned from design through deployment, with back-end services and REST API integrations behind them.",
+    stack: ["React", "JavaScript", "HTML / CSS", "REST APIs"] },
+  { title: "Home Media Server", kind: "Systems", date: "Running", cover: "homelab",
+    chain: ["devices", "wi-fi", "router", "server", "disks"],
+    summary: "A spare PC turned into a personal streaming server. Static IP, strong auth, minimal open ports and scheduled scans. The goal: set it up once, keep it stable, reach it from anywhere.",
+    stack: ["Linux", "Self-hosting", "Networking"] },
+];
+const LAB = [
+  { title: "Dev Tools Pack", kind: "Tools", date: "Ongoing", cover: "code",
+    summary: "Small utilities that save time: backup helpers, environment bootstrapping, log parsers and one-command setup scripts.",
+    stack: ["Bash", "Python", "Linux"], source: "https://github.com/Haseeb564" },
+  { title: "Inventory Dashboard", kind: "Data", date: "Concept", cover: "type",
+    summary: "A dashboard for daily inventory reporting aimed at executives: trends, stock at risk, slow movers and exceptions.",
+    stack: ["SQL", "Analytics"] },
+  { title: "API + Auth Starter", kind: "Backend", date: "Planned", cover: "rail",
+    tokens: ["auth", "roles", "CRUD", "validate", "tests"],
+    summary: "A clean back-end starter with auth, roles, CRUD, validation and a test skeleton, meant as proof of production-ready code.",
+    stack: ["REST", "Auth", "Testing"] },
+];
+const EXPERIENCE = [
+  { years: "2023 – now", role: "Software Developer", org: "Code Experts", note: "Websites and web apps in React and JavaScript, back-end services and REST API integrations, plus debugging and load-time work across the codebase." },
+  { years: "2022 – 2023", role: "Social Media & Tech Marketing Intern", org: "Code Experts", note: "Technical content for SaaS, web and app services, run on a content calendar tied to product launches." },
+  { years: "2022", role: "Bookkeeper", org: "Curtin University", note: "Financial statements and tax returns for multiple stakeholders." },
+  { years: "2021", role: "Operations Intern", org: "Zain Bahrain", note: "Enterprise operations at one of Bahrain's largest telecoms companies." },
+];
+const FOCUS = [
+  ["Backend + Database", "Schemas with constraints, indexes and clean relationships. Procedures and triggers for automation. Query and report views built for real use."],
+  ["Systems + Linux", "Self-hosted services with stable networking. Backups, monitoring and rollback. Simple solutions over fragile ones."],
+  ["Game Systems", "Combat feel: stamina, i-frames, movement. Weapons as data-driven modules. State machines for enemy and boss AI."],
+];
+const STACK = [
+  ["Languages", ["Java", "Python", "C / C++", "Rust", "SQL", "GDScript", "JavaScript"]],
+  ["Web + back end", ["React", "Node.js", "REST APIs", "HTML / CSS"]],
+  ["Data + infra", ["MySQL", "PostgreSQL", "Docker", "Linux", "AWS / GCP", "Git"]],
+  ["Games", ["Godot 4"]],
+];
 
-  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-  if (!gl) return; // dark body bg is already a fine fallback
+/* ========================================================= */
+const $ = s => document.querySelector(s);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobileQ = matchMedia("(max-width: 820px)");
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const rng = seed => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const pad = n => String(n).padStart(2, "0");
 
-  /* ── Vertex: full-screen triangle pair ── */
-  const VS = `
-    attribute vec2 p;
-    void main(){ gl_Position = vec4(p, 0.0, 1.0); }
-  `;
+const home = $("#home"), work = $("#work"), strip = $("#strip"), filters = $("#filters");
+const rHead = $("#rHead"), rBody = $("#rBody"), reading = $("#reading");
 
-  /* ── Fragment: 4 Gaussian blobs, slowly orbiting ── */
-  const FS = `
-    precision mediump float;
-    uniform float u_t;
-    uniform vec2  u_r;
+/* ---------- fill home text ---------- */
+$("#mark").innerHTML = [...SITE.mark].map((ch, i) => `<span class="l"><i style="--d:${(i * 0.06).toFixed(2)}s">${esc(ch)}</i></span>`).join("");
+$("#mark").setAttribute("aria-label", SITE.name);
+$("#hName").textContent = SITE.name; $("#hRole").textContent = SITE.role;
+$("#hBlurb").textContent = SITE.blurb; $("#wm").textContent = SITE.name;
+$("#nP").textContent = pad(PROJECTS.length); $("#nL").textContent = pad(LAB.length);
+const started = Date.now();
+const tick = () => {
+  const s = Math.floor((Date.now() - started) / 1000);
+  $("#hMeta").textContent = `${pad(PROJECTS.length)}_${pad(LAB.length)}  ·  uptime ${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+};
+tick(); setInterval(tick, 1000);
 
-    /* smooth Gaussian blob at centre c with spread s */
-    float blob(vec2 uv, vec2 c, float s){
-      vec2 d = uv - c;
-      return exp(-dot(d,d) * s);
+/* ---------- boot cover ---------- */
+function intro() {
+  const cover = $("#cover"), boot = $("#boot"), pct = $("#pct");
+  const finish = () => { cover.classList.add("done"); home.classList.remove("pre"); };
+  if (reduce || location.hash.length > 1) { finish(); return; }
+  home.classList.add("pre");
+  const user = SITE.name.split(" ")[0].toLowerCase();
+  const lines = [`$ boot portfolio --user ${user}`, "  resolving modules ......... <b>ok</b>", "  compiling shaders ......... <b>ok</b>",
+    `  hydrating ${PROJECTS.length + LAB.length} entries ........ <b>ok</b>`, "  checking for bugs ......... <b>1 found, kept as a pet</b>"];
+  const t0 = performance.now(), dur = 1500;
+  let done = false;
+  cover.addEventListener("click", () => { done = true; finish(); }, { once: true });
+  (function step(now) {
+    if (done) return;
+    const p = Math.max(0, Math.min(1, (now - t0) / dur));
+    pct.textContent = String(Math.round(p * 100)).padStart(3, "0");
+    boot.innerHTML = lines.slice(0, Math.max(1, Math.ceil(p * lines.length))).join("\n");
+    if (p < 1) requestAnimationFrame(step); else setTimeout(finish, 240);
+  })(t0);
+}
+
+/* ---------- router ---------- */
+const state = { list: [], filter: "All", active: null, mode: "" };
+function route() {
+  const r = location.hash.slice(1);
+  const page = ["projects", "lab", "info"].includes(r) ? r : "home";
+  const isHome = page === "home";
+  home.hidden = !isHome; work.hidden = isHome;
+  document.body.classList.toggle("is-work", !isHome);
+  if (isHome) { Draft.stop(); Home.start(); return; }
+  Home.stop();
+  document.querySelectorAll(".wnav a").forEach(a => {
+    if (a.getAttribute("href") === "#" + page) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  renderWork(page);
+  Draft.start();
+  window.scrollTo(0, 0);
+}
+
+function renderWork(page) {
+  state.mode = page;
+  work.classList.toggle("is-info", page === "info");
+  strip.classList.toggle("is-info", page === "info");
+  strip.setAttribute("aria-label", page === "info" ? "Experience" : page === "lab" ? "Experiment list" : "Project list");
+  strip.removeAttribute("style"); strip.scrollTop = 0; strip.scrollLeft = 0;
+  if (page === "info") { filters.hidden = true; renderInfo(); return; }
+  filters.hidden = false;
+  state.list = page === "lab" ? LAB : PROJECTS;
+  state.filter = "All"; state.active = null;
+  const kinds = ["All", ...new Set(state.list.map(p => p.kind))];
+  filters.innerHTML = kinds.map(k => `<button type="button" aria-pressed="${k === "All"}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
+  strip.innerHTML = "";
+  state.list.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "thumb"; b.dataset.i = i; b.dataset.kind = p.kind;
+    b.setAttribute("aria-label", `${p.title}, ${p.kind}, ${p.date}`);
+    const cv = document.createElement("canvas"); b.append(cv); strip.append(b);
+    Covers.draw(cv, p);
+  });
+  layoutStrip();
+  const first = visibleThumbs()[0];
+  if (first) { setActive(first, true); scrollToThumb(first, true); }
+}
+
+function renderInfo() {
+  rHead.innerHTML = `<span class="r-kicker">$ whoami</span><h2 class="r-title">${esc(SITE.name)}</h2>`;
+  rBody.innerHTML = `
+    <p class="r-meta"><span>${esc(SITE.role)}</span><span>–</span><span>${esc(SITE.degree)}</span></p>
+    <p class="r-where">${esc(SITE.where)}</p>
+    <p class="r-desc">${esc(SITE.bio)}</p>
+    <div><p class="label">Education</p>${SITE.education.map(x =>
+      `<div class="xp"><span class="xp-years">${esc(x.years)}</span><span class="xp-role">${esc(x.title)}</span><span class="xp-note">${esc(x.org)}. ${esc(x.note)}</span></div>`).join("")}</div>
+    <div><p class="label">Contact</p><div class="contact">
+      <div class="contact-row"><code id="mail">${esc(SITE.email)}</code><button type="button" class="copy" id="copyMail">Copy email</button></div>
+      <div class="contact-row r-links">${SITE.links.map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join("")}</div>
+    </div></div>`;
+  strip.innerHTML = `<p class="label">Experience</p>` + EXPERIENCE.map(x =>
+    `<div class="xp"><span class="xp-years">${esc(x.years)}</span><span class="xp-role">${esc(x.role)}</span><span class="xp-note">${esc(x.org)}. ${esc(x.note)}</span></div>`).join("") +
+    `<p class="label">What I work on</p>` + FOCUS.map(([h, t]) =>
+    `<div class="xp"><span class="xp-role">${esc(h)}</span><span class="xp-note">${esc(t)}</span></div>`).join("") +
+    `<p class="label">Stack</p><div class="stack-grid">${STACK.map(([h, items]) =>
+      `<div><b style="font-size:12px">${esc(h)}</b><ul>${items.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div>`;
+  $("#copyMail").addEventListener("click", e => {
+    const btn = e.currentTarget;
+    const done = () => { btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy email", 1600); };
+    const sel = () => { const r = document.createRange(); r.selectNodeContents($("#mail")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected, press Ctrl+C"; };
+    try { navigator.clipboard.writeText(SITE.email).then(done, sel); } catch { sel(); }
+  });
+  Draft.reseed(hash(SITE.name));
+  swapIn();
+}
+
+function swapIn() {
+  if (reduce) return;
+  reading.classList.add("swap");
+  void reading.offsetWidth;
+  setTimeout(() => reading.classList.remove("swap"), 30);
+}
+
+/* ---------- strip: the thumbnail crossing the reading line is the active one ---------- */
+const visibleThumbs = () => [...strip.querySelectorAll(".thumb:not([hidden])")];
+const lineY = () => strip.clientHeight * 0.4;
+
+function layoutStrip() {
+  if (state.mode === "info" || !state.mode) return;
+  if (mobileQ.matches) { strip.style.paddingTop = strip.style.paddingBottom = ""; return; }
+  const t = visibleThumbs()[0]; if (!t) return;
+  const h = t.offsetHeight;
+  strip.style.paddingTop = Math.max(0, lineY() - h / 2) + "px";
+  strip.style.paddingBottom = Math.max(0, strip.clientHeight - lineY() - h / 2) + "px";
+}
+
+function scrollToThumb(el, instant) {
+  const behavior = instant || reduce ? "auto" : "smooth";
+  if (mobileQ.matches) strip.scrollTo({ left: el.offsetLeft + el.offsetWidth / 2 - strip.clientWidth / 2, behavior });
+  else strip.scrollTo({ top: el.offsetTop + el.offsetHeight / 2 - lineY(), behavior });
+}
+
+function detectActive() {
+  if (state.mode === "info") return;
+  const sr = strip.getBoundingClientRect();
+  const target = mobileQ.matches ? sr.left + sr.width / 2 : sr.top + sr.height * 0.4;
+  let best = null, bd = Infinity;
+  for (const t of visibleThumbs()) {
+    const b = t.getBoundingClientRect();
+    const d = Math.abs((mobileQ.matches ? b.left + b.width / 2 : b.top + b.height / 2) - target);
+    if (d < bd) { bd = d; best = t; }
+  }
+  if (best && best !== state.active) setActive(best);
+}
+
+function setActive(el, silent) {
+  if (state.active) state.active.classList.remove("on");
+  state.active = el; el.classList.add("on");
+  const p = state.list[+el.dataset.i];
+  const n = state.list.indexOf(p) + 1;
+  rHead.innerHTML = `<span class="r-kicker">${pad(n)} / ${pad(state.list.length)}</span><h2 class="r-title">${esc(p.title)}</h2>`;
+  rBody.innerHTML = `
+    <p class="r-meta"><span>${esc(p.date)}</span><span>–</span><span>${esc(p.kind)}</span></p>
+    <p class="r-desc">${esc(p.summary)}</p>
+    ${p.notes ? `<div class="r-notes"><p class="label">${esc(p.notesTitle || "Notes")}</p><ol>${p.notes.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
+    <ul class="r-stack">${p.stack.map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+    <div class="r-links">${p.live ? `<a href="${esc(p.live)}" target="_blank" rel="noopener">Live ↗</a>` : ""}${p.source ? `<a href="${esc(p.source)}" target="_blank" rel="noopener">Source ↗</a>` : ""}</div>`;
+  Draft.reseed(hash(p.title));
+  if (!silent) swapIn();
+}
+
+let scrollRaf = 0, settle = 0;
+strip.addEventListener("scroll", () => {
+  cancelAnimationFrame(scrollRaf); scrollRaf = requestAnimationFrame(detectActive);
+  /* desktop: once scrolling stops, ease the active thumbnail onto the reading line */
+  clearTimeout(settle);
+  if (!mobileQ.matches && state.mode !== "info") settle = setTimeout(() => { if (state.active) scrollToThumb(state.active); }, 180);
+}, { passive: true });
+strip.addEventListener("click", e => { const t = e.target.closest(".thumb"); if (t) { scrollToThumb(t); setActive(t); } });
+strip.addEventListener("keydown", e => {
+  const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+  if (!(e.key in keys) || state.mode === "info") return;
+  e.preventDefault();
+  const list = visibleThumbs(), i = list.indexOf(state.active);
+  const next = list[Math.max(0, Math.min(list.length - 1, i + keys[e.key]))];
+  if (next) { next.focus({ preventScroll: true }); scrollToThumb(next); setActive(next); }
+});
+filters.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.filter = b.dataset.k;
+  filters.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  strip.querySelectorAll(".thumb").forEach(t => t.hidden = !(state.filter === "All" || t.dataset.kind === state.filter));
+  layoutStrip();
+  const first = visibleThumbs()[0];
+  if (first) { setActive(first); scrollToThumb(first, true); }
+});
+/* desktop: the wheel anywhere on the sheet drives the strip */
+work.addEventListener("wheel", e => {
+  if (mobileQ.matches || state.mode === "info" || strip.contains(e.target)) return;
+  if (rBody.contains(e.target) && rBody.scrollHeight > rBody.clientHeight + 2) return;
+  strip.scrollTop += e.deltaY; e.preventDefault();
+}, { passive: false });
+addEventListener("resize", () => { layoutStrip(); if (state.active && state.mode !== "info") scrollToThumb(state.active, true); });
+
+/* =========================================================
+   Shared drawing helpers
+   ========================================================= */
+const TAU = Math.PI * 2;
+const MONO = '"JetBrains Mono", Consolas, monospace', PIXEL = 'Silkscreen, "JetBrains Mono", monospace', SERIF = '"Cormorant Garamond", Garamond, serif';
+function rr(c, x, y, w, h, r) { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); }
+function daisy(c, x, y, R, n, fill, stroke, lw, rot = 0) {
+  c.save(); c.translate(x, y); c.fillStyle = fill; c.strokeStyle = stroke; c.lineWidth = lw;
+  for (let layer = 0; layer < 2; layer++) for (let k = 0; k < n; k++) {
+    c.save(); c.rotate(rot + (k + layer * 0.5) * TAU / n);
+    c.beginPath(); c.ellipse(R * 0.55, 0, R * 0.45, R * (layer ? 0.1 : 0.125), 0, 0, TAU); c.fill(); c.stroke(); c.restore();
+  }
+  c.restore();
+}
+/* the classic donut.c torus, returned as a grid of shade indexes (0-11, -1 = empty) */
+function donut(A, B, cols, rows) {
+  const out = new Int8Array(cols * rows).fill(-1), zb = new Float32Array(cols * rows);
+  const cA = Math.cos(A), sA = Math.sin(A), cB = Math.cos(B), sB = Math.sin(B);
+  for (let j = 0; j < TAU; j += 0.09) {
+    const ct = Math.cos(j), st = Math.sin(j);
+    for (let i = 0; i < TAU; i += 0.03) {
+      const sp = Math.sin(i), cp = Math.cos(i), h = ct + 2, D = 1 / (sp * h * sA + st * cA + 5), t = sp * h * cA - st * sA;
+      const x = Math.floor(cols / 2 + cols * 0.375 * D * (cp * h * cB - t * sB));
+      const y = Math.floor(rows / 2 + rows * 0.68 * D * (cp * h * sB + t * cB));
+      if (y < 0 || y >= rows || x < 0 || x >= cols) continue;
+      const o = x + cols * y;
+      if (D > zb[o]) { zb[o] = D; const N = Math.floor(8 * ((st * sA - sp * ct * cA) * cB - sp * ct * sA - st * cA - cp * ct * sB)); out[o] = N > 0 ? N : 0; }
     }
+  }
+  return out;
+}
+const SHADES = ".,-~:;=!*#$@";
 
-    void main(){
-      vec2 uv = gl_FragCoord.xy / u_r;
-      float t = u_t * 0.09;
+/* =========================================================
+   HOME: drifting code specimens on a night canvas
+   ========================================================= */
+const Home = (() => {
+  const cv = $("#bg"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1, cards = [], dots = [], raf = 0, running = false;
+  let mx = 0, my = 0, tmx = 0, tmy = 0, outline = null, shown = null, oa = 0, C = {};
+  const t0 = performance.now();
 
-      /* four blob centres — each on a different Lissajous-ish path */
-      vec2 c1 = vec2(0.15 + 0.22*sin(t*0.70),       0.12 + 0.18*cos(t*0.53));
-      vec2 c2 = vec2(0.84 + 0.13*cos(t*0.44),       0.83 + 0.14*sin(t*0.61));
-      vec2 c3 = vec2(0.50 + 0.24*sin(t*0.88 + 1.6), 0.50 + 0.20*cos(t*0.74));
-      vec2 c4 = vec2(0.72 + 0.18*cos(t*0.57 + 0.8), 0.22 + 0.19*sin(t*0.40));
-
-      float b1 = blob(uv, c1, 5.5);
-      float b2 = blob(uv, c2, 7.0);
-      float b3 = blob(uv, c3, 9.0);
-      float b4 = blob(uv, c4, 6.5);
-
-      /* base: near-black navy */
-      vec3 col = vec3(0.020, 0.022, 0.058);
-
-      /* blob colours — vivid but dark so text stays legible */
-      col += vec3(0.04, 0.10, 0.58) * b1 * 1.05;  /* electric blue   */
-      col += vec3(0.30, 0.04, 0.52) * b2 * 0.85;  /* deep purple     */
-      col += vec3(0.02, 0.22, 0.36) * b3 * 0.60;  /* dark teal/cyan  */
-      col += vec3(0.20, 0.04, 0.45) * b4 * 0.75;  /* indigo          */
-
-      gl_FragColor = vec4(col, 1.0);
-    }
-  `;
-
-  function compile(type, src) {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src); gl.compileShader(s); return s;
+  const colors = () => { C = { night: css("--night"), ash: css("--ash"), bone: css("--bone"), peri: css("--peri"), lime: css("--lime") }; };
+  function offscreen(w, h) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr));
+    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, x];
+  }
+  function vertical(c, s, x, y, lh) {
+    c.save(); c.textAlign = "center"; c.textBaseline = "middle";
+    [...s].forEach((ch, i) => c.fillText(ch, x, y + (i - (s.length - 1) / 2) * lh)); c.restore();
   }
 
-  const prog = gl.createProgram();
-  gl.attachShader(prog, compile(gl.VERTEX_SHADER,   VS));
-  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
-  gl.linkProgram(prog);
-  gl.useProgram(prog);
+  /* ---- cards ---- */
+  function drawPixel(c, w, h) {
+    rr(c, 0, 0, w, h, 10); c.fillStyle = C.peri; c.fill();
+    c.save(); rr(c, 0, 0, w, h, 10); c.clip();
+    c.fillStyle = C.night; c.font = `${w * 0.5}px ${PIXEL}`; c.textBaseline = "top";
+    ["4", "0", "4"].forEach((ch, i) => c.fillText(ch, w * 0.07, h * 0.035 + i * w * 0.6));
+    c.fillStyle = C.bone; c.fillRect(w * 0.08, h * 0.5, w * 0.84, w * 0.3);
+    c.fillStyle = C.night; c.font = `${w * 0.17}px ${PIXEL}`; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText("NULL", w * 0.5, h * 0.5 + w * 0.15);
+    c.textAlign = "left"; c.textBaseline = "alphabetic";
+    c.save(); c.translate(w * 0.68, h * 0.02); c.rotate(Math.PI / 2);
+    c.fillStyle = C.bone; c.font = `${w * 0.075}px ${MONO}`;
+    const s = "segmentation fault (core dumped) at 0x7ffe3a1c   ";
+    c.fillText(s + s + s, 0, 0); c.fillText('Traceback (most recent call last): File "main.py", line 42, in <module>', 0, w * 0.11);
+    c.restore();
+    c.save(); c.translate(w * 0.2, h * 0.6); c.rotate(Math.PI / 2);
+    c.strokeStyle = C.bone; c.lineWidth = 1; c.font = `${w * 0.24}px ${MONO}`; c.strokeText("error", 0, 0); c.restore();
+    c.fillStyle = C.night; const r = rng(7), px = w * 0.06;
+    for (let i = 0; i < 46; i++) c.fillRect(w * 0.08 + Math.floor(r() * 14) * px, h * 0.8 + Math.floor(r() * 8) * px, px, px);
+    c.restore();
+  }
 
-  /* full-screen quad */
-  const buf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-  gl.bufferData(gl.ARRAY_BUFFER,
-    new Float32Array([-1,-1, 1,-1, -1,1, 1,1]),
-    gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, 'p');
-  gl.enableVertexAttribArray(loc);
-  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  function drawPort(c, w, h, t) {
+    const r = w / 2;
+    c.save(); c.beginPath(); c.arc(r, r, r - 1, 0, TAU); c.clip();
+    c.fillStyle = C.night; c.fillRect(0, 0, w, h);
+    c.save(); c.beginPath(); c.rect(0, 0, w, h * 0.56); c.clip();
+    c.strokeStyle = C.bone; c.lineWidth = 1.3; const s = w / 3.4;
+    for (let k = -5; k <= 9; k++) {
+      c.beginPath(); c.moveTo(k * s, 0); c.lineTo(k * s + h, h); c.moveTo(k * s, 0); c.lineTo(k * s - h, h); c.stroke();
+    }
+    c.fillStyle = C.night; c.beginPath(); c.arc(r * 0.6, h * 0.18, w * 0.05, 0, TAU); c.fill();
+    c.fillStyle = C.bone; c.beginPath(); c.arc(r * 0.6, h * 0.18, w * 0.03, 0, TAU); c.fill();
+    c.fillStyle = C.night; c.beginPath(); c.arc(r * 0.6 + w * 0.013, h * 0.18 - w * 0.008, w * 0.027, 0, TAU); c.fill();
+    c.restore();
+    c.strokeStyle = C.bone; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h * 0.56); c.lineTo(w, h * 0.56); c.stroke();
+    const cols = 44, rows = 13, cw = w * 0.86 / cols, ch = cw * 1.9, x0 = w * 0.07, y0 = h * 0.5;
+    const g = donut(t * 0.7, t * 0.35, cols, rows);
+    c.font = `600 ${cw * 1.7}px ${MONO}`; c.textBaseline = "top";
+    for (let i = 0; i < g.length; i++) {
+      const N = g[i]; if (N < 0) continue;
+      c.fillStyle = N >= 8 ? C.bone : C.peri;
+      c.globalAlpha = N >= 4 ? 1 : 0.55;
+      c.fillText(SHADES[N], x0 + (i % cols) * cw, y0 + Math.floor(i / cols) * ch);
+    }
+    c.globalAlpha = 1; c.textBaseline = "alphabetic";
+    c.restore();
+    c.strokeStyle = C.bone; c.lineWidth = 1.6; c.beginPath(); c.arc(r, r, r - 1.5, 0, TAU); c.stroke();
+    c.lineWidth = 0.8; c.beginPath(); c.arc(r, r, r * 0.92, 0, TAU); c.stroke();
+  }
 
-  const uT = gl.getUniformLocation(prog, 'u_t');
-  const uR = gl.getUniformLocation(prog, 'u_r');
+  const ovalGeo = (w, h) => { const rx = w * 0.37, ry = h * 0.43, cx = w / 2, cy = h * 0.52; return { cx, cy, rx, ry, top: cy - ry * 0.4 }; };
+  function drawOval(c, w, h) {
+    rr(c, 0, 0, w, h, 10); c.fillStyle = C.peri; c.fill();
+    const { cx, cy, rx, ry, top } = ovalGeo(w, h);
+    c.fillStyle = C.night; c.font = `${w * 0.12}px ${PIXEL}`; c.textBaseline = "top";
+    c.fillText("</", w * 0.04, h * 0.025); c.textAlign = "right"; c.fillText("/>", w * 0.96, h * 0.025);
+    c.textBaseline = "bottom"; c.fillText("{}", w * 0.96, h * 0.985); c.textAlign = "left"; c.fillText("[]", w * 0.04, h * 0.985);
+    c.textBaseline = "alphabetic";
+    c.font = `600 ${w * 0.042}px ${MONO}`;
+    vertical(c, "(undefined)", w * 0.065, cy, w * 0.05); vertical(c, "(NaN)", w * 0.935, cy, w * 0.05);
+    c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.fillStyle = C.night; c.fill();
+    c.save(); c.clip();
+    c.fillStyle = C.bone; c.beginPath(); c.ellipse(cx, cy - ry * 0.84, rx * 0.13, rx * 0.035, 0, 0, TAU); c.fill();
+    /* the stem is a git graph */
+    c.strokeStyle = C.bone; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(cx, top); c.lineTo(cx, cy + ry * 1.1); c.stroke();
+    const bx = cx - rx * 0.4;
+    c.beginPath(); c.moveTo(cx, cy + ry * 0.02);
+    c.bezierCurveTo(cx, cy + ry * 0.14, bx, cy + ry * 0.08, bx, cy + ry * 0.22);
+    c.lineTo(bx, cy + ry * 0.4);
+    c.bezierCurveTo(bx, cy + ry * 0.54, cx, cy + ry * 0.48, cx, cy + ry * 0.62); c.stroke();
+    c.beginPath(); c.moveTo(cx, cy + ry * 0.3);
+    c.quadraticCurveTo(cx + rx * 0.5, cy + ry * 0.02, cx + rx * 0.7, cy + ry * 0.12);
+    c.quadraticCurveTo(cx + rx * 0.45, cy + ry * 0.38, cx, cy + ry * 0.3);
+    c.fillStyle = C.night; c.fill(); c.stroke();
+    c.lineWidth = 1; c.beginPath(); c.moveTo(cx, cy + ry * 0.3); c.quadraticCurveTo(cx + rx * 0.35, cy + ry * 0.18, cx + rx * 0.68, cy + ry * 0.125); c.stroke();
+    const commit = (x, y, fill) => { c.beginPath(); c.arc(x, y, w * 0.017, 0, TAU); c.fillStyle = fill || C.night; c.fill(); c.lineWidth = 2; c.strokeStyle = C.bone; c.stroke(); };
+    [0.15, 0.3, 0.62, 0.86].forEach(k => commit(cx, cy + ry * k));
+    commit(bx, cy + ry * 0.25); commit(bx, cy + ry * 0.38, C.lime);
+    commit(cx, cy + ry * 0.74, C.lime);
+    c.fillStyle = C.bone; c.font = `${w * 0.028}px ${MONO}`;
+    c.fillText("main", cx + w * 0.03, cy + ry * 0.75); c.fillText("HEAD", cx + w * 0.03, cy + ry * 0.75 + w * 0.035);
+    c.textAlign = "right"; c.fillText("fix/bug-417", bx - w * 0.03, cy + ry * 0.33); c.textAlign = "left";
+    daisy(c, cx, top, rx * 0.56, 22, C.bone, C.night, 1.4, 0.1);
+    c.beginPath(); c.arc(cx, top, rx * 0.56 * 0.25, 0, TAU); c.fillStyle = C.bone; c.fill(); c.lineWidth = 1.4; c.strokeStyle = C.night; c.stroke();
+    c.fillStyle = C.bone; c.font = `${w * 0.04}px ${MONO}`;
+    const txt = "TypeError: undefined is not a function", n = txt.length;
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI * 0.84 - (i / (n - 1)) * Math.PI * 0.68;
+      c.save(); c.translate(cx + rx * 0.88 * Math.cos(a), cy + ry * 0.9 * Math.sin(a)); c.rotate(a - Math.PI / 2);
+      c.fillText(txt[i], -w * 0.012, 0); c.restore();
+    }
+    c.restore();
+    c.strokeStyle = C.bone; c.lineWidth = 2; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.stroke();
+    c.lineWidth = 1; c.beginPath(); c.ellipse(cx, cy, rx + w * 0.025, ry + w * 0.025, 0, 0, TAU); c.stroke();
+  }
+  /* the one bug this site keeps on purpose */
+  function drawBug(c, w, h, t) {
+    const { cx, rx, top } = ovalGeo(w, h);
+    const seg = rx * 0.13, x0 = cx - seg * 3.4, y = top + seg * 0.2;
+    c.lineWidth = 1.6; c.strokeStyle = C.night;
+    for (let i = 4; i >= 0; i--) {
+      const x = x0 + i * seg * 1.7, yy = y + Math.sin(t * 2.2 - i * 0.9) * seg * 0.2;
+      c.beginPath(); c.arc(x, yy, seg * (i ? 1 : 1.08), 0, TAU); c.fillStyle = C.lime; c.fill(); c.stroke();
+      if (i) { c.beginPath(); c.arc(x, yy - seg * 0.2, seg * 0.45, Math.PI * 0.15, Math.PI * 0.85); c.stroke(); }
+    }
+    const hy = y + Math.sin(t * 2.2) * seg * 0.2, blink = (t % 4.2) < 0.13 ? 0.08 : 1;
+    c.beginPath(); c.ellipse(x0 - seg * 0.2, hy - seg * 0.1, seg * 0.4, seg * 0.26 * blink, 0, 0, TAU); c.fillStyle = C.bone; c.fill(); c.stroke();
+    c.beginPath(); c.arc(x0 - seg * 0.32, hy - seg * 0.1, seg * 0.13 * blink, 0, TAU); c.fillStyle = C.night; c.fill();
+    c.strokeStyle = C.lime; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x0 - seg * 0.2, hy - seg * 0.95); c.quadraticCurveTo(x0 - seg * 0.6, hy - seg * 1.9, x0 - seg * 1.15, hy - seg * 1.75); c.stroke();
+    c.beginPath(); c.arc(x0 - seg * 1.15, hy - seg * 1.75, seg * 0.16, 0, TAU); c.fillStyle = C.lime; c.fill();
+  }
+
+  function drawLoop(c, w, h) {
+    rr(c, 1, 1, w - 2, h - 2, 16); c.fillStyle = C.night; c.fill();
+    c.save(); rr(c, 1, 1, w - 2, h - 2, 16); c.clip();
+    daisy(c, w * 0.42, h * 0.98, w * 0.62, 22, C.bone, C.night, 1.5, 0.2);
+    c.beginPath(); c.arc(w * 0.42, h * 0.98, w * 0.62 * 0.24, 0, TAU); c.fillStyle = C.bone; c.fill(); c.stroke();
+    c.font = `600 ${w * 0.07}px ${MONO}`; c.lineJoin = "round";
+    ["while (true) {", "  learn();", "  build();", "  ship();", "}"].forEach((l, i) => {
+      const y = h * 0.14 + i * w * 0.092;
+      c.lineWidth = 5; c.strokeStyle = C.night; c.strokeText(l, w * 0.08, y); c.fillStyle = C.bone; c.fillText(l, w * 0.08, y);
+    });
+    c.beginPath();
+    for (let i = 0; i <= 140; i++) {
+      const a = i / 140 * TAU, d = 1 + Math.sin(a) ** 2;
+      const x = w * 0.62 + w * 0.24 * Math.cos(a) / d, y = h * 0.62 + w * 0.24 * Math.sin(a) * Math.cos(a) / d;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.lineWidth = w * 0.075; c.lineCap = "round"; c.strokeStyle = C.night; c.stroke();
+    c.restore();
+    rr(c, 1, 1, w - 2, h - 2, 16); c.strokeStyle = C.bone; c.lineWidth = 1.5; c.stroke();
+  }
+
+  function drawTile(c, w, h, i) {
+    rr(c, 1, 1, w - 2, h - 2, 14); c.fillStyle = C.night; c.fill();
+    c.save(); rr(c, 1, 1, w - 2, h - 2, 14); c.clip();
+    const R = w * 0.36;
+    daisy(c, w / 2, h * 0.56, R, 18, C.bone, C.night, 1.3, i * 0.3);
+    c.beginPath(); c.arc(w / 2, h * 0.56, R * 0.36, 0, TAU); c.fillStyle = C.peri; c.fill(); c.strokeStyle = C.night; c.lineWidth = 1.5; c.stroke();
+    c.fillStyle = C.night; c.font = `600 ${R * 0.3}px ${MONO}`; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(["{ }", "</>", "=>"][i % 3], w / 2, h * 0.56 + 1);
+    c.restore();
+    rr(c, 1, 1, w - 2, h - 2, 14); c.strokeStyle = C.bone; c.lineWidth = 1.2; c.stroke();
+  }
+
+  function drawTerm(c, w, h) {
+    rr(c, 0, 0, w, h, 10); c.fillStyle = C.ash; c.fill();
+    c.strokeStyle = C.bone; c.lineWidth = 1; c.globalAlpha = 0.4; c.stroke();
+    c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w, h * 0.12); c.stroke(); c.globalAlpha = 1;
+    for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(w * 0.04 + k * w * 0.035, h * 0.06, Math.max(2.5, w * 0.009), 0, TAU); c.stroke(); }
+    const fs = Math.max(8, w * 0.03); c.font = `${fs}px ${MONO}`;
+    const lines = ["~/code-carbon (main) $ git log --oneline", "6779617 Boss health bars with damage trail", "cbbe4ce Crypt: boss foyer and fixed arena",
+      "9940a86 Crypt: branching connected floor", "885d4ef Class pick, passive tree, flasks", "8b1dbfe Add Demon of the Old Empire boss", "~/code-carbon (main) $ ▍"];
+    lines.forEach((l, i) => {
+      c.fillStyle = i === 0 || i === lines.length - 1 ? C.lime : C.bone; c.globalAlpha = i === 0 ? 1 : 0.75;
+      c.fillText(l, w * 0.04, h * 0.24 + i * fs * 1.75);
+    });
+    c.globalAlpha = 1;
+  }
+
+  /* ---- layout ---- */
+  function layout() {
+    const wide = W >= H * 1.05, s = Math.min(W * 0.15, H * 0.26);
+    const list = wide ? [
+      { x: .37 * W, y: .47 * H, w: .3 * W, h: .34 * H, rot: -.015, depth: .2, draw: drawTerm },
+      { x: .17 * W, y: .64 * H, w: .29 * W, h: .52 * H, rot: .02, depth: .55, draw: drawLoop, ghost: true },
+      { x: .012 * W, y: -.04 * H, w: Math.max(120, .14 * W), h: 1.06 * H, rot: -.01, depth: .8, draw: drawPixel, ghost: true },
+      { x: .335 * W - .27 * H, y: -.01 * H, w: .54 * H, h: .54 * H, rot: 0, depth: .45, draw: drawPort, live: true, ghost: true },
+      { x: .55 * W, y: -.38 * s, w: s, h: s, rot: .03, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 0) },
+      { x: .55 * W + s * 1.07, y: -.3 * s, w: s, h: s, rot: -.02, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 1) },
+      { x: .55 * W + s * 2.14, y: -.42 * s, w: s, h: s, rot: .015, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 2) },
+      { x: .535 * W, y: .19 * H, w: .42 * W, h: .92 * H, rot: -.006, depth: .7, draw: drawOval, bug: true, ghost: true },
+    ] : [
+      { x: .04 * W, y: .34 * H, w: .82 * W, h: .2 * H, rot: -.02, depth: .2, draw: drawTerm },
+      { x: -.1 * W, y: .64 * H, w: .62 * W, h: .3 * H, rot: .03, depth: .55, draw: drawLoop, ghost: true },
+      { x: -.03 * W, y: -.03 * H, w: .3 * W, h: .62 * H, rot: -.02, depth: .8, draw: drawPixel, ghost: true },
+      { x: .34 * W, y: .02 * H, w: .7 * W, h: .7 * W, rot: 0, depth: .45, draw: drawPort, live: true, ghost: true },
+      { x: .44 * W, y: .45 * H, w: .7 * W, h: .62 * H, rot: -.01, depth: .7, draw: drawOval, bug: true, ghost: true },
+    ];
+    dots = wide ? [[.69, .9, 7], [.715, .64, 6], [.3, .58, 4]] : [[.4, .6, 6], [.9, .4, 5]];
+    return list;
+  }
+  function build() {
+    cards = layout().map((k, i) => {
+      k.ph = i * 1.7; [k.cv, k.cx] = offscreen(k.w, k.h);
+      if (!k.live) k.draw(k.cx, k.w, k.h);
+      return k;
+    });
+  }
+
+  function place(k, t, mult, ghost) {
+    const ox = (Math.sin(t * 0.23 + k.ph) * 10 + mx * k.depth * 36) * mult + (ghost ? 18 : 0);
+    const oy = (Math.cos(t * 0.19 + k.ph * 1.3) * 12 + my * k.depth * 24) * mult + (ghost ? 10 : 0);
+    ctx.save(); ctx.translate(k.x + k.w / 2 + ox, k.y + k.h / 2 + oy); ctx.rotate(k.rot + Math.sin(t * 0.17 + k.ph) * 0.012 * mult);
+    ctx.drawImage(k.cv, -k.w / 2, -k.h / 2, k.w, k.h);
+    if (k.bug && !ghost) { ctx.translate(-k.w / 2, -k.h / 2); drawBug(ctx, k.w, k.h, t); }
+    ctx.restore();
+  }
+
+  function drawOutline(t) {
+    const S = Math.min(W, H) * 0.8, cx = W / 2, cy = H / 2;
+    ctx.save(); ctx.globalAlpha = oa * 0.9; ctx.strokeStyle = C.bone; ctx.fillStyle = C.bone; ctx.lineWidth = 1.2;
+    if (shown === "projects") {
+      for (const k of [-1, 0, 1]) {
+        const w = S * 1.05, h = S * 0.66, x = cx - w / 2 + k * S * 0.07, y = cy - h / 2 + k * S * 0.07;
+        rr(ctx, x, y, w, h, 8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y + S * 0.06); ctx.lineTo(x + w, y + S * 0.06); ctx.stroke();
+        for (let d = 0; d < 3; d++) { ctx.beginPath(); ctx.arc(x + S * 0.03 + d * S * 0.03, y + S * 0.03, S * 0.008, 0, TAU); ctx.stroke(); }
+      }
+    } else if (shown === "lab") {
+      const r = S * 0.46;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+      for (const p of [-60, -30, 0, 30, 60]) { const a = p * Math.PI / 180; ctx.beginPath(); ctx.ellipse(cx, cy + r * Math.sin(a), r * Math.cos(a), r * Math.cos(a) * 0.2, 0, 0, TAU); ctx.stroke(); }
+      for (let k = 0; k < 6; k++) { const a = t * 0.35 + k * Math.PI / 6; ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(r * Math.cos(a)), r, 0, 0, TAU); ctx.stroke(); }
+    } else if (shown === "info") {
+      for (const f of [0.16, 0.28, 0.42]) { ctx.beginPath(); ctx.arc(cx, cy, S * f, 0, TAU); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(cx - S * 0.56, cy); ctx.lineTo(cx + S * 0.56, cy); ctx.moveTo(cx, cy - S * 0.56); ctx.lineTo(cx, cy + S * 0.56); ctx.stroke();
+      for (let k = 0; k < 72; k++) {
+        const a = k * TAU / 72 + t * 0.05, r1 = S * 0.42, r2 = r1 + (k % 6 ? 6 : 14);
+        ctx.beginPath(); ctx.moveTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a)); ctx.lineTo(cx + r2 * Math.cos(a), cy + r2 * Math.sin(a)); ctx.stroke();
+      }
+      ctx.font = `12px ${MONO}`; ctx.fillText("hello, world", cx + 10, cy - 10);
+    }
+    ctx.restore();
+  }
+
+  function frame(now) {
+    if (W < 2 || H < 2 || !cards.length) { if (running && !reduce) raf = requestAnimationFrame(frame); return; }
+    const t = (now - t0) / 1000;
+    mx += (tmx - mx) * 0.04; my += (tmy - my) * 0.04;
+    oa = reduce ? (outline ? 1 : 0) : oa + ((outline ? 1 : 0) - oa) * 0.08;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
+    for (const k of cards) if (k.live) { k.cx.clearRect(0, 0, k.w, k.h); k.draw(k.cx, k.w, k.h, t); }
+    for (const k of cards) place(k, t, 1, false);
+    ctx.fillStyle = C.lime;
+    dots.forEach(([x, y, r], i) => { ctx.beginPath(); ctx.arc(x * W + Math.sin(t * 0.5 + i) * 9 + mx * 20, y * H + Math.cos(t * 0.4 + i) * 9 + my * 14, r, 0, TAU); ctx.fill(); });
+    ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.14;
+    for (const k of cards) if (k.ghost) place(k, t, -1.8, true);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 0.3 + oa * 0.42; ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.78);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, C.night);
+    ctx.globalAlpha = 0.7; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    if (oa > 0.01) drawOutline(t);
+    if (running && !reduce) raf = requestAnimationFrame(frame);
+  }
 
   function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    W = home.clientWidth || innerWidth; H = home.clientHeight || innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
+    if (W < 2 || H < 2) { cards = []; return; }
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    colors(); build();
+    if (reduce) frame(performance.now());
   }
-  window.addEventListener('resize', resize);
-  resize();
 
-  (function tick(ms) {
-    gl.uniform1f(uT, ms * 0.001);
-    gl.uniform2f(uR, canvas.width, canvas.height);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    requestAnimationFrame(tick);
-  })(0);
+  home.addEventListener("pointermove", e => { if (reduce) return; tmx = e.clientX / W - 0.5; tmy = e.clientY / H - 0.5; });
+  home.querySelectorAll("[data-outline]").forEach(a => {
+    const on = () => { outline = shown = a.dataset.outline; home.classList.add("peek"); if (reduce) frame(performance.now()); };
+    const off = () => { outline = null; home.classList.remove("peek"); if (reduce) frame(performance.now()); };
+    a.addEventListener("pointerenter", on); a.addEventListener("pointerleave", off);
+    a.addEventListener("focus", on); a.addEventListener("blur", off);
+  });
+  let rz = 0;
+  addEventListener("resize", () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => { if (!home.hidden) resize(); }); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) cancelAnimationFrame(raf);
+    else if (running && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
+  });
+
+  return {
+    start() { if (running) return; running = true; resize(); if (!reduce) raf = requestAnimationFrame(frame); },
+    stop() { running = false; cancelAnimationFrame(raf); },
+    rebuild() { if (!home.hidden) resize(); },
+  };
+})();
+
+/* =========================================================
+   COVERS: monochrome generative thumbnails, one style per project
+   ========================================================= */
+const Covers = (() => {
+  /* shrink `size` until `text` fits `maxW`; `font` has a {} where the size goes */
+  function fit(c, text, maxW, size, font) {
+    c.font = font.replace("{}", size);
+    while (size > 10 && c.measureText(text).width > maxW) c.font = font.replace("{}", --size);
+  }
+  /* A pocket version of CodeCarbon's crypt_floor.gd: grow rooms as a graph off free
+     sides (fewest-exits first), line each corridor up on both facing walls, reject
+     padded overlaps, then BFS from the entry to pick the boss room. */
+  function dungeonLayout(r) {
+    const rooms = [], links = [], OUT = [[0, -1], [0, 1], [1, 0], [-1, 0]], OPP = [1, 0, 3, 2];
+    const R = (a, b) => a + r() * (b - a);
+    const exits = q => Object.keys(q.sides).length;
+    const box = q => [q.cx - q.hw, q.cy - q.hh, q.cx + q.hw, q.cy + q.hh];
+    const hit = (a, b, pad) => a[0] - pad < b[2] && a[2] + pad > b[0] && a[1] - pad < b[3] && a[3] + pad > b[1];
+    rooms.push({ cx: 0, cy: 0, hw: 30, hh: 22, sides: {} });
+    const want = 7 + Math.floor(r() * 2);
+    for (let tries = 0; rooms.length < want && tries < want * 80; tries++) {
+      const open = rooms.map((q, i) => i).filter(i => exits(rooms[i]) < 4);
+      if (!open.length) break;
+      const least = Math.min(...open.map(i => exits(rooms[i])));
+      const pool = r() < 0.34 ? open : open.filter(i => exits(rooms[i]) === least);
+      const s = pool[Math.floor(r() * pool.length)], a = rooms[s];
+      const free = [0, 1, 2, 3].filter(d => !(d in a.sides));
+      const d = free[Math.floor(r() * free.length)];
+      const hw = R(20, 38), hh = R(15, 27), len = R(10, 22), half = 4, pad = half + 4;
+      const side = d > 1, [ox, oy] = OUT[d], step = side ? ox : oy;
+      const aLo = side ? a.cy - a.hh : a.cx - a.hw, aHi = side ? a.cy + a.hh : a.cx + a.hw;
+      const axis = R(aLo + pad, aHi - pad);                       // doorway on A's wall
+      const bHalf = side ? hh : hw;
+      const along = R(axis - (bHalf - pad), axis + (bHalf - pad)); // slide B so its wall covers it
+      const aLine = side ? a.cx + ox * a.hw : a.cy + oy * a.hh, far = aLine + step * len;
+      const across = far + step * (side ? hw : hh);
+      const q = { cx: side ? across : along, cy: side ? along : across, hw, hh, sides: {} };
+      const nb = box(q);
+      const cr = side ? [Math.min(aLine, far), axis - half, Math.max(aLine, far), axis + half]
+                      : [axis - half, Math.min(aLine, far), axis + half, Math.max(aLine, far)];
+      if (rooms.some((o, i) => i !== s && (hit(nb, box(o), 10) || hit(cr, box(o), 10)))) continue;
+      if (links.some(l => l.a !== s && l.b !== s && hit(nb, l.rect, 10))) continue;
+      rooms.push(q);
+      const b = rooms.length - 1;
+      a.sides[d] = links.length; q.sides[OPP[d]] = links.length;
+      links.push({ a: s, b, rect: cr });
+    }
+    const hop = rooms.map(() => -1), queue = [0]; hop[0] = 0;
+    while (queue.length) {
+      const i = queue.shift();
+      for (const li of Object.values(rooms[i].sides)) {
+        const l = links[li], j = l.a === i ? l.b : l.a;
+        if (hop[j] < 0) { hop[j] = hop[i] + 1; queue.push(j); }
+      }
+    }
+    let boss = 0, best = -1;
+    rooms.forEach((q, i) => { const sc = hop[i] + (exits(q) === 1 ? 0.5 : 0); if (i && sc > best) { best = sc; boss = i; } });
+    return { rooms, links, hop, boss, box };
+  }
+  const styles = {
+    dungeon(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      c.fillStyle = WH; c.globalAlpha = 0.09;
+      for (let x = 8; x < W; x += 16) for (let y = 8; y < H; y += 16) c.fillRect(x, y, 1.5, 1.5);
+      c.globalAlpha = 1;
+      const { rooms, links, hop, boss, box } = dungeonLayout(r);
+      const bs = rooms.map(box).concat(links.map(l => l.rect));
+      const x0 = Math.min(...bs.map(b => b[0])), y0 = Math.min(...bs.map(b => b[1]));
+      const x1 = Math.max(...bs.map(b => b[2])), y1 = Math.max(...bs.map(b => b[3]));
+      const top = 18, bottom = 74, k = Math.min((W - 48) / (x1 - x0), (H - top - bottom) / (y1 - y0));
+      const ox = (W - (x1 - x0) * k) / 2 - x0 * k, oy = top + (H - top - bottom - (y1 - y0) * k) / 2 - y0 * k;
+      const px = b => [b[0] * k + ox, b[1] * k + oy, (b[2] - b[0]) * k, (b[3] - b[1]) * k];
+      c.fillStyle = WH;
+      links.forEach(l => { const [x, y, w, h] = px(l.rect); c.fillRect(x, y, w, h); });
+      c.font = `600 13px ${MONO}`; c.textAlign = "center"; c.textBaseline = "middle"; c.lineWidth = 2; c.strokeStyle = WH;
+      rooms.forEach((q, i) => {
+        const [x, y, w, h] = px(box(q));
+        c.fillStyle = i === boss ? WH : BK; c.fillRect(x, y, w, h); c.strokeRect(x, y, w, h);
+        c.fillStyle = i === boss ? BK : WH;
+        c.fillText(i === 0 ? "IN" : i === boss ? "BOSS" : String(hop[i]), x + w / 2, y + h / 2 + 1);
+      });
+      c.textAlign = "left"; c.textBaseline = "alphabetic";
+      c.fillStyle = WH; c.font = `30px ${PIXEL}`; c.fillText(p.title, 24, H - 26);
+      c.font = `12px ${MONO}`; c.textAlign = "right"; c.globalAlpha = 0.7;
+      c.fillText(`${rooms.length} rooms · bfs depth ${Math.max(...hop)}`, W - 24, H - 30);
+      c.globalAlpha = 1; c.textAlign = "left";
+    },
+    schema(c, W, H, r, p, BK, WH) {
+      c.fillStyle = WH; c.fillRect(0, 0, W, H);
+      const T = [
+        { n: "books", x: 22, y: 22, f: ["id  PK", "title", "isbn", "author_id  FK"] },
+        { n: "members", x: 22, y: 166, f: ["id  PK", "name", "email"] },
+        { n: "loans", x: 204, y: 92, f: ["id  PK", "book_id  FK", "member_id  FK", "due_at"] },
+        { n: "audit_log", x: 386, y: 22, f: ["id  PK", "action", "at"] },
+      ], tw = 152, rh = 18;
+      const mid = (t, i) => [t.x + tw, t.y + 24 + rh * i + rh / 2];
+      c.strokeStyle = BK; c.lineWidth = 1.4;
+      [[0, 0, 2, 1], [1, 0, 2, 2]].forEach(([a, ai, b, bi]) => {
+        const [x1, y1] = mid(T[a], ai), x2 = T[b].x, y2 = T[b].y + 24 + rh * bi + rh / 2;
+        c.beginPath(); c.moveTo(x1, y1); c.bezierCurveTo(x1 + 30, y1, x2 - 30, y2, x2, y2); c.stroke();
+        c.beginPath(); c.moveTo(x2 - 8, y2 - 6); c.lineTo(x2, y2); c.lineTo(x2 - 8, y2 + 6); c.stroke();
+      });
+      c.setLineDash([4, 3]);
+      c.beginPath(); c.moveTo(T[2].x + tw, T[2].y + 12); c.lineTo(T[3].x, T[3].y + 12 + rh); c.stroke(); c.setLineDash([]);
+      c.fillStyle = BK; c.font = `10px ${MONO}`; c.fillText("trigger", T[2].x + tw + 4, T[2].y + 2);
+      T.forEach(t => {
+        const h = 24 + t.f.length * rh;
+        c.fillStyle = WH; c.fillRect(t.x, t.y, tw, h); c.strokeRect(t.x, t.y, tw, h);
+        c.fillStyle = BK; c.fillRect(t.x, t.y, tw, 24);
+        c.fillStyle = WH; c.font = `600 13px ${MONO}`; c.fillText(t.n, t.x + 8, t.y + 16);
+        c.fillStyle = BK; c.font = `11px ${MONO}`;
+        t.f.forEach((f, i) => c.fillText(f, t.x + 8, t.y + 24 + rh * i + 13));
+      });
+      c.fillStyle = BK; fit(c, p.title, W - 48, 40, `300 {}px ${SERIF}`); c.fillText(p.title, 24, H - 22);
+    },
+    homelab(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      const chain = p.chain || ["client", "router", "server"], n = chain.length;
+      const gap = (W - 80) / n, y = H * 0.42;
+      c.strokeStyle = WH; c.lineWidth = 1.5; c.font = `600 12px ${MONO}`; c.textAlign = "center"; c.textBaseline = "middle";
+      c.beginPath(); c.moveTo(40 + gap * 0.5, y); c.lineTo(40 + gap * (n - 0.5), y); c.stroke();
+      chain.forEach((t, i) => {
+        const x = 40 + gap * (i + 0.5), w = Math.min(gap - 12, c.measureText(t).width + 20), server = i === n - 2;
+        rr(c, x - w / 2, y - 18, w, 36, i === 1 ? 18 : 2);
+        c.fillStyle = server ? WH : BK; c.fill(); c.stroke();
+        c.fillStyle = server ? BK : WH; c.fillText(t, x, y);
+      });
+      c.fillStyle = WH;
+      c.textAlign = "left"; c.textBaseline = "alphabetic";
+      c.font = `11px ${MONO}`; c.globalAlpha = 0.65;
+      ["media service", "library / auth", "backups / health"].forEach((t, i) => c.fillText("› " + t, 40 + gap * (n - 2) + 6, y + 44 + i * 16));
+      c.globalAlpha = 1; c.font = `600 26px ${MONO}`; c.fillText(p.title, 26, H - 24);
+    },
+    wave(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      for (let i = 0; i < 20; i++) {
+        const y0 = 46 + i * 10.5, pts = [], ph = r() * 6;
+        for (let x = 40; x <= W - 40; x += 5) {
+          const d = Math.abs(x - W / 2) / (W / 2), bump = Math.max(0, 1 - d * 1.7) ** 2;
+          pts.push([x, y0 - bump * (34 + 26 * Math.sin(x * 0.045 + ph) * Math.sin(x * 0.011 + i))]);
+        }
+        c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y));
+        c.lineTo(W - 40, H); c.lineTo(40, H); c.closePath(); c.fillStyle = BK; c.fill();
+        c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y));
+        c.strokeStyle = WH; c.lineWidth = 1.5; c.stroke();
+      }
+      c.fillStyle = WH; c.font = `300 62px ${SERIF}`; c.fillText(p.title, 34, H - 30);
+    },
+    grid(c, W, H, r, p, BK, WH) {
+      c.fillStyle = WH; c.fillRect(0, 0, W, H);
+      const hz = H * 0.48, vx = W / 2; c.strokeStyle = BK; c.lineWidth = 1;
+      for (let x = -W; x <= W * 2; x += 44) { c.beginPath(); c.moveTo(vx, hz); c.lineTo(x, H); c.stroke(); }
+      for (let k = 1; k <= 12; k++) { const y = hz + (H - hz) * (k / 12) ** 2; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+      c.fillStyle = WH; c.fillRect(0, hz - 70, W, 70);
+      c.lineWidth = 1.5; c.beginPath(); c.moveTo(W * 0.2, hz - 34); c.lineTo(W * 0.8, hz - 34); c.stroke();
+      c.font = `600 14px ${MONO}`;
+      (p.labels || ["n1", "n2", "n3"]).forEach((n, i) => {
+        const x = W * (0.25 + i * 0.25), bw = Math.max(72, c.measureText(n).width + 24);
+        c.fillStyle = i === 1 ? BK : WH; c.fillRect(x - bw / 2, hz - 54, bw, 40); c.strokeRect(x - bw / 2, hz - 54, bw, 40);
+        c.fillStyle = i === 1 ? WH : BK; c.textAlign = "center"; c.fillText(n, x, hz - 29); c.textAlign = "left";
+      });
+      c.fillStyle = BK; fit(c, p.title.toUpperCase(), W - 60, 40, `600 {}px ${MONO}`); c.fillText(p.title.toUpperCase(), 30, 62);
+      c.font = `13px ${MONO}`; c.fillText(p.caption || "", 32, 88);
+    },
+    dither(c, W, H, r, p, BK, WH) {
+      c.fillStyle = WH; c.fillRect(0, 0, W, H);
+      const B = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], px = 5;
+      const bx = W * (0.55 + r() * 0.15), by = H * 0.45, R = H * 0.62;
+      c.fillStyle = BK;
+      for (let gy = 0; gy < H / px; gy++) for (let gx = 0; gx < W / px; gx++) {
+        const d = Math.hypot(gx * px - bx, gy * px - by) / R;
+        const v = Math.max(0, 1 - d) ** 0.9 + (gx * px > W * 0.82 ? 0.15 : 0);
+        if (v * 16 > B[gy % 4][gx % 4] + 0.5) c.fillRect(gx * px, gy * px, px, px);
+      }
+      c.font = `34px ${PIXEL}`;
+      c.fillStyle = WH; c.fillRect(24, H - 78, c.measureText(p.title).width + 24, 54);
+      c.fillStyle = BK; c.fillText(p.title, 36, H - 38);
+    },
+    type(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      c.strokeStyle = WH; c.lineWidth = 1.4; c.font = `300 ${H * 1.15}px ${SERIF}`;
+      const g = p.title.replace(/[^A-Za-z]/g, "").slice(0, 2) || "Hi";
+      c.strokeText(g, W * 0.04, H * 0.92);
+      c.globalAlpha = 0.35; c.strokeText(g, W * 0.04 + 14, H * 0.92 + 8); c.globalAlpha = 1;
+      c.fillStyle = WH; c.font = `14px ${MONO}`; c.fillText(p.title, 24, 34);
+      c.textAlign = "right"; c.fillText(p.date, W - 24, 34); c.textAlign = "left";
+      c.fillRect(24, 46, W - 48, 1);
+    },
+    graph(c, W, H, r, p, BK, WH) {
+      c.fillStyle = WH; c.fillRect(0, 0, W, H);
+      const N = Array.from({ length: 48 }, () => [30 + r() * (W - 60), 90 + r() * (H - 120)]);
+      c.strokeStyle = BK; c.lineWidth = 0.8; c.globalAlpha = 0.45;
+      N.forEach((a, i) => {
+        N.map((b, j) => [j, Math.hypot(a[0] - b[0], a[1] - b[1])]).filter(([j]) => j !== i).sort((x, y) => x[1] - y[1]).slice(0, 2)
+          .forEach(([j]) => { c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(N[j][0], N[j][1]); c.stroke(); });
+      });
+      c.globalAlpha = 1;
+      const route = N.slice(0, 9).sort((a, b) => a[0] - b[0]);
+      c.lineWidth = 4; c.lineJoin = "round"; c.beginPath(); route.forEach(([x, y], k) => k ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke();
+      c.fillStyle = BK; N.forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 2.6, 0, TAU); c.fill(); });
+      route.forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fillStyle = WH; c.fill(); c.lineWidth = 2; c.stroke(); });
+      c.fillStyle = BK; c.font = `300 52px ${SERIF}`; c.fillText(p.title, 28, 64);
+    },
+    code(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      const hl = 3 + Math.floor(r() * 7);
+      for (let i = 0; i < 12; i++) {
+        const y = 28 + i * 21;
+        if (i === hl) { c.fillStyle = WH; c.globalAlpha = 0.12; c.fillRect(0, y - 8, W, 21); }
+        c.globalAlpha = 0.4; c.fillStyle = WH; c.font = `12px ${MONO}`; c.fillText(String(i + 1).padStart(2, " "), 18, y + 6);
+        let x = 60 + Math.floor(r() * 3) * 22;
+        const n = 1 + Math.floor(r() * 5);
+        for (let k = 0; k < n && x < W - 40; k++) {
+          const w = 18 + r() * 90; c.globalAlpha = i === hl ? 1 : 0.25 + r() * 0.45;
+          c.fillRect(x, y - 2, w, 8); x += w + 10;
+        }
+      }
+      c.globalAlpha = 1; c.fillStyle = WH; c.font = `600 30px ${MONO}`; c.fillText(p.title, 60, H - 30);
+    },
+    donut(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      const cols = 60, rows = 18, cw = W * 0.8 / cols, ch = cw * 1.9, g = donut(1.1, 0.5, cols, rows);
+      c.font = `600 ${cw * 1.7}px ${MONO}`; c.textBaseline = "top"; c.fillStyle = WH;
+      for (let i = 0; i < g.length; i++) {
+        if (g[i] < 0) continue;
+        c.globalAlpha = 0.35 + g[i] / 16; c.fillText(SHADES[g[i]], W * 0.1 + (i % cols) * cw, 8 + Math.floor(i / cols) * ch);
+      }
+      c.globalAlpha = 1; c.textBaseline = "alphabetic"; c.font = `600 26px ${MONO}`; c.fillText(p.title, 26, H - 24);
+    },
+    rail(c, W, H, r, p, BK, WH) {
+      c.fillStyle = WH; c.fillRect(0, 0, W, H);
+      const y = H * 0.58, toks = p.tokens || ["^", "[a-z]+", "@", "\\d{2,}", "$"];
+      c.strokeStyle = BK; c.lineWidth = 2; c.beginPath(); c.moveTo(34, y); c.lineTo(W - 34, y); c.stroke();
+      [34, W - 34].forEach(x => { c.beginPath(); c.arc(x, y, 7, 0, TAU); c.fillStyle = BK; c.fill(); });
+      c.font = `600 14px ${MONO}`; c.textAlign = "center"; c.textBaseline = "middle";
+      let x = 70; const gap = (W - 140) / toks.length;
+      toks.forEach((t, i) => {
+        const w = Math.min(gap - 10, c.measureText(t).width + 22), cx = x + gap / 2;
+        if (i === 1 || i === 3) { c.beginPath(); c.moveTo(cx - w / 2 - 6, y); c.arcTo(cx - w / 2 - 6, y - 42, cx, y - 42, 14); c.arcTo(cx + w / 2 + 6, y - 42, cx + w / 2 + 6, y, 14); c.lineTo(cx + w / 2 + 6, y); c.stroke(); }
+        rr(c, cx - w / 2, y - 17, w, 34, 17); c.fillStyle = i % 2 ? BK : WH; c.fill(); c.stroke();
+        c.fillStyle = i % 2 ? WH : BK; c.fillText(t, cx, y + 1); x += gap;
+      });
+      c.textAlign = "left"; c.textBaseline = "alphabetic"; c.fillStyle = BK; c.font = `600 26px ${MONO}`; c.fillText(p.title, 28, 52);
+    },
+  };
+  return {
+    draw(cv, p) {
+      const W = 560, H = 350; cv.width = W; cv.height = H;
+      const c = cv.getContext("2d");
+      (styles[p.cover] || styles.code)(c, W, H, rng(hash(p.title)), p, css("--night"), css("--bone"));
+    },
+  };
+})();
+
+/* =========================================================
+   DRAFT: the technical drawing under the reading line (left column)
+   ========================================================= */
+const Draft = (() => {
+  const cv = $("#draft"), c = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1, raf = 0, running = false, cur = null, tgt = null, ink = "";
+  const t0 = performance.now();
+  const gen = seed => { const r = rng(seed), v = [];
+    for (let i = 0; i < 4; i++) v.push(0.1 + r() * 0.8, 0.12 + r() * 0.5, 0.05 + r() * 0.14);
+    for (let i = 0; i < 4; i++) v.push(0.1 + i * 0.25 + r() * 0.05, 0.05 + r() * 0.05);
+    v.push(2 + r() * 4, 0.03 + r() * 0.07, 0.25 + r() * 0.25, 0.2 + r() * 0.5);
+    return v; };
+  function draw(t) {
+    if (!W || !cur) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    c.strokeStyle = ink; c.fillStyle = ink; c.lineWidth = 1; c.font = `9px ${MONO}`;
+    for (let i = 0; i < 4; i++) {
+      const x = cur[i * 3] * W, y = cur[i * 3 + 1] * H, R = cur[i * 3 + 2] * W;
+      c.setLineDash([]); c.beginPath(); c.arc(x, y, R, 0, TAU); c.stroke();
+      if (i % 2) { c.beginPath(); c.arc(x, y, R * 0.82, t * 0.4 + i, t * 0.4 + i + 1.4); c.stroke(); }
+      c.setLineDash([5, 3]); c.beginPath(); c.moveTo(x - R * 1.3, y); c.lineTo(x + R * 1.3, y); c.moveTo(x, y - R * 1.3); c.lineTo(x, y + R * 1.3); c.stroke();
+      c.setLineDash([]); c.fillText(`R${Math.round(R)}`, x + R * 0.72 + 3, y - R * 0.72);
+    }
+    const f = cur[20], A = cur[21] * H, wy = cur[22] * H;
+    c.beginPath(); for (let x = 0; x <= W; x += 3) { const y = wy + Math.sin(x / W * f * TAU + t * 0.8) * A; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+    const g1 = H * 0.86;
+    c.beginPath(); c.moveTo(0, g1); c.lineTo(W, g1); c.moveTo(0, g1 + 6); c.lineTo(W, g1 + 6); c.stroke();
+    for (let i = 0; i < 4; i++) {
+      const x = cur[12 + i * 2] * W, R = cur[13 + i * 2] * W, cy = g1 - R, a = t * 0.6 * (40 / R);
+      c.beginPath(); c.arc(x, cy, R, 0, TAU); c.stroke(); c.beginPath(); c.arc(x, cy, R * 0.15, 0, TAU); c.stroke();
+      for (let k = 0; k < 6; k++) { const s = a + k * TAU / 6; c.beginPath(); c.moveTo(x + Math.cos(s) * R * 0.15, cy + Math.sin(s) * R * 0.15); c.lineTo(x + Math.cos(s) * R * 0.92, cy + Math.sin(s) * R * 0.92); c.stroke(); }
+    }
+    const x1 = W * 0.08, x2 = W * (0.08 + cur[23]), dy = H * 0.06;
+    c.beginPath(); c.moveTo(x1, dy); c.lineTo(x2, dy); c.moveTo(x1, dy - 5); c.lineTo(x1, dy + 5); c.moveTo(x2, dy - 5); c.lineTo(x2, dy + 5); c.stroke();
+    c.textAlign = "center"; c.fillText(`${Math.round(x2 - x1)} px`, (x1 + x2) / 2, dy - 5); c.textAlign = "left";
+    for (let y = 10; y < H; y += 8) { c.beginPath(); c.moveTo(W - 4, y); c.lineTo(W - (y % 40 < 8 ? 12 : 7), y); c.stroke(); }
+  }
+  function loop(now) {
+    if (cur && tgt) for (let i = 0; i < cur.length; i++) cur[i] += (tgt[i] - cur[i]) * 0.06;
+    draw((now - t0) / 1000);
+    if (running && !reduce) raf = requestAnimationFrame(loop);
+  }
+  function resize() {
+    W = cv.clientWidth; H = cv.clientHeight; dpr = Math.min(2, devicePixelRatio || 1);
+    if (!W) return;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ink = css("--ink");
+    if (reduce) draw(0);
+  }
+  addEventListener("resize", () => { if (running) resize(); });
+  return {
+    start() { resize(); if (running) return; running = true; if (!reduce) raf = requestAnimationFrame(loop); },
+    stop() { running = false; cancelAnimationFrame(raf); },
+    reseed(seed) { tgt = gen(seed); if (!cur || reduce) cur = tgt.slice(); if (reduce) draw(0); },
+    refresh() { ink = css("--ink"); if (reduce) draw(0); },
+  };
+})();
+
+/* =========================================================
+   START
+   ========================================================= */
+let fontsReady;
+try {
+  fontsReady = Promise.race([
+    Promise.all(['300 40px "Cormorant Garamond"', "16px Silkscreen", '16px "JetBrains Mono"', '600 16px "JetBrains Mono"'].map(f => document.fonts.load(f))),
+    new Promise(r => setTimeout(r, 2000)),
+  ]).catch(() => {});
+} catch { fontsReady = Promise.resolve(); }
+
+intro();
+route();
+addEventListener("hashchange", route);
+fontsReady.then(() => {
+  Home.rebuild();
+  if (state.mode && state.mode !== "info") strip.querySelectorAll(".thumb").forEach(b => Covers.draw(b.querySelector("canvas"), state.list[+b.dataset.i]));
+});
+const themeChange = () => Draft.refresh();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeChange);
+new MutationObserver(themeChange).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+mobileQ.addEventListener("change", () => { if (!work.hidden) { layoutStrip(); if (state.active) scrollToThumb(state.active, true); } });
 })();
 </script>
 
-<!-- Liquid Glass JS -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/dashersw/liquid-glass-js@main/container.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/dashersw/liquid-glass-js@main/button.js"></script>
-
-<script>
-  document.getElementById('year').textContent = new Date().getFullYear();
-
-  /* Scroll-reveal for all cards */
-  const io = new IntersectionObserver(
-    (entries) => entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-    }),
-    { threshold: 0.07 }
-  );
-  document.querySelectorAll('.card').forEach(c => io.observe(c));
-
-  /* Liquid-glass hero buttons (replaces CSS fallbacks on load) */
-  window.addEventListener('load', () => {
-    if (typeof Button === 'undefined') return;
-    const wrap = document.getElementById('hero-cta');
-    wrap.innerHTML = '';
-
-    const links = [
-      { text: 'Download CV', href: 'assets/CV.pdf',                                              blank: true },
-      { text: 'GitHub',      href: 'https://github.com/Haseeb564',                               blank: true },
-      { text: 'LinkedIn',    href: 'https://www.linkedin.com/in/haseeb-rahat-1ab870376/',        blank: true },
-    ];
-
-    links.forEach(({ text, href, blank }) => {
-      try {
-        const btn = new Button({
-          text, size: 15, type: 'rounded',
-          onClick: () => blank ? window.open(href, '_blank') : (location.href = href),
-        });
-        btn.element.style.cursor = 'pointer';
-        wrap.appendChild(btn.element);
-      } catch (_) {
-        const a = Object.assign(document.createElement('a'), {
-          href, className: 'btn', textContent: text,
-        });
-        if (blank) a.target = '_blank';
-        wrap.appendChild(a);
-      }
-    });
-  });
-</script>
-</body>
 </html>
