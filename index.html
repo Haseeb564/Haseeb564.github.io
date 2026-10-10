@@ -44,11 +44,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .home{position:fixed;inset:0;overflow:hidden;background:var(--night);color:var(--bone)}
 .home canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .home .ui{position:absolute;inset:0;text-shadow:0 0 14px var(--night),0 0 3px var(--night)}
-.mark{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--mx,0px)),calc(-58% + var(--my,0px)));margin:0;font-family:var(--f-display);font-weight:300;font-size:clamp(84px,21.5vw,420px);line-height:.82;letter-spacing:-.04em;color:color-mix(in srgb,var(--bone) 52%,transparent);white-space:nowrap;pointer-events:none;text-shadow:none;transition:opacity .5s}
-.mark .l{display:inline-block;overflow:hidden;vertical-align:top;padding:0 .01em .03em}
-.mark i{display:inline-block;font-style:normal;transition:transform 1.2s cubic-bezier(.16,.8,.1,1);transition-delay:var(--d,0s)}
-.home.pre .mark i{transform:translateY(108%)}
-.home.peek .mark{opacity:.22}
+/* the giant name is painted into the canvas so the glass coin can refract it; this h1 is for screen readers */
+.mark{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.home{touch-action:none}
+.home #glass{inset:auto;left:0;top:0;pointer-events:none;will-change:transform}
+.home.grab{cursor:grab}
+.home.grabbing{cursor:grabbing}
+.coin-hint{position:absolute;left:0;top:0;pointer-events:none;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb,var(--bone) 72%,transparent);text-shadow:0 0 10px var(--night),0 0 3px var(--night)}
 .home-id{position:absolute;left:clamp(16px,8.6vw,150px);top:47.5%;display:grid;gap:3px;margin:0;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
 .home-id span{font-weight:500;color:color-mix(in srgb,var(--bone) 70%,transparent)}
 .home-blurb{position:absolute;left:25.6%;top:47.5%;display:grid;gap:14px;max-width:34ch;font-size:10px;line-height:1.4;letter-spacing:.07em;text-transform:uppercase;font-weight:500}
@@ -162,6 +164,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 <section class="home" id="home" aria-label="Home">
   <canvas id="bg" aria-hidden="true"></canvas>
+  <canvas id="glass" aria-hidden="true"></canvas>
+  <span class="coin-hint" id="coinHint" aria-hidden="true">drag me</span>
   <div class="ui">
     <h1 class="mark" id="mark" aria-label="Haseeb Rahat"></h1>
     <p class="home-id"><b id="hName">Haseeb Rahat</b><span id="hRole">Software Engineer</span></p>
@@ -280,8 +284,7 @@ const home = $("#home"), work = $("#work"), strip = $("#strip"), filters = $("#f
 const rHead = $("#rHead"), rBody = $("#rBody"), reading = $("#reading");
 
 /* ---------- fill home text ---------- */
-$("#mark").innerHTML = [...SITE.mark].map((ch, i) => `<span class="l"><i style="--d:${(i * 0.06).toFixed(2)}s">${esc(ch)}</i></span>`).join("");
-$("#mark").setAttribute("aria-label", SITE.name);
+$("#mark").textContent = SITE.name;
 $("#hName").textContent = SITE.name; $("#hRole").textContent = SITE.role;
 $("#hBlurb").textContent = SITE.blurb; $("#wm").textContent = SITE.name;
 $("#nP").textContent = pad(PROJECTS.length); $("#nL").textContent = pad(LAB.length);
@@ -295,7 +298,7 @@ tick(); setInterval(tick, 1000);
 /* ---------- boot cover ---------- */
 function intro() {
   const cover = $("#cover"), boot = $("#boot"), pct = $("#pct");
-  const finish = () => { cover.classList.add("done"); home.classList.remove("pre"); };
+  const finish = () => { cover.classList.add("done"); home.classList.remove("pre"); Home.reveal(); };
   if (reduce || location.hash.length > 1) { finish(); return; }
   home.classList.add("pre");
   const user = SITE.name.split(" ")[0].toLowerCase();
@@ -511,7 +514,7 @@ const SHADES = ".,-~:;=!*#$@";
 const Home = (() => {
   const cv = $("#bg"), ctx = cv.getContext("2d");
   let W = 0, H = 0, dpr = 1, cards = [], dots = [], raf = 0, running = false;
-  let mx = 0, my = 0, tmx = 0, tmy = 0, outline = null, shown = null, oa = 0, C = {};
+  let outline = null, shown = null, oa = 0, C = {}, revealAt = Infinity, lastNow = 0, NL = null;
   const t0 = performance.now();
 
   const colors = () => { C = { night: css("--night"), ash: css("--ash"), bone: css("--bone"), peri: css("--peri"), lime: css("--lime") }; };
@@ -756,9 +759,8 @@ const Home = (() => {
 
   function frame(now) {
     if (W < 2 || H < 2 || !cards.length) { if (running && !reduce) raf = requestAnimationFrame(frame); return; }
-    const t = (now - t0) / 1000;
-    mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
-    moveName();
+    const t = (now - t0) / 1000, dt = Math.min(0.05, Math.max(0, (now - (lastNow || now)) / 1000));
+    lastNow = now;
     oa = reduce ? (outline ? 1 : 0) : oa + ((outline ? 1 : 0) - oa) * 0.08;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
@@ -773,28 +775,255 @@ const Home = (() => {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.78);
     g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, C.night);
     ctx.globalAlpha = 0.7; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    drawName(now);
     if (oa > 0.01) drawOutline(t);
+    glassFrame(now, dt);
     if (running && !reduce) raf = requestAnimationFrame(frame);
+  }
+
+  /* ---- the name, painted into the canvas so the glass can bend it ---- */
+  function layoutName() {
+    const fs = mobileQ.matches ? W * 0.245 : Math.max(84, Math.min(W * 0.215, 420));
+    ctx.font = `300 ${fs}px ${SERIF}`;
+    const chars = [...SITE.mark], track = -0.04 * fs;
+    const ws = chars.map(ch => ctx.measureText(ch).width);
+    const total = ws.reduce((a, b) => a + b, 0) + track * (chars.length - 1);
+    const cap = ctx.measureText("H").actualBoundingBoxAscent || fs * 0.63;
+    const block = 0.82 * fs, cy = H * (mobileQ.matches ? 0.43 : 0.5) - 0.58 * block + block / 2;
+    let x = W / 2 - total / 2;
+    const xs = ws.map(w => { const at = x; x += w + track; return at; });
+    NL = { fs, chars, ws, xs, cap, cy, base: cy + cap / 2, total };
+  }
+  function drawName(now) {
+    if (!NL) return;
+    ctx.save();
+    ctx.font = `300 ${NL.fs}px ${SERIF}`; ctx.fillStyle = C.bone; ctx.textBaseline = "alphabetic";
+    ctx.globalAlpha = 0.52 * (1 - 0.78 * oa);
+    NL.chars.forEach((ch, i) => {
+      const p = Math.max(0, Math.min(1, (now - revealAt - i * 60) / 1200));
+      if (p <= 0) return;
+      const rise = Math.pow(1 - p, 4) * NL.cap * 1.2;   // each letter slides up out of a mask
+      ctx.save(); ctx.beginPath();
+      ctx.rect(NL.xs[i] - NL.fs * 0.1, NL.base - NL.cap * 1.3, NL.ws[i] + NL.fs * 0.2, NL.cap * 1.3 + NL.fs * 0.06); ctx.clip();
+      ctx.fillText(ch, NL.xs[i], NL.base + rise); ctx.restore();
+    });
+    ctx.restore();
   }
 
   function resize() {
     W = home.clientWidth || innerWidth; H = home.clientHeight || innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
     if (W < 2 || H < 2) { cards = []; return; }
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    colors(); build();
+    colors(); build(); layoutName(); glassResize();
     if (reduce) frame(performance.now());
   }
 
-  /* only the name follows the mouse: the word shifts, and each letter sits at its own depth */
-  const markEl = $("#mark"), letters = [...markEl.querySelectorAll(".l")];
-  const depth = letters.map((_, i) => 0.45 + ((i * 5) % 7) / 7);
-  function moveName() {
-    markEl.style.setProperty("--mx", (mx * 70).toFixed(2) + "px");
-    markEl.style.setProperty("--my", (my * 40).toFixed(2) + "px");
-    letters.forEach((l, i) => { l.style.transform = `translate(${(mx * 26 * depth[i]).toFixed(2)}px, ${(my * 16 * depth[i]).toFixed(2)}px)`; });
+  /* =========================================================
+     LIQUID GLASS COIN: a WebGL refraction shader over a snapshot of the canvas.
+     The coin is a thin glass cylinder spinning about its vertical axis. Each pixel
+     works out whether it sees the face or the rim, builds a surface normal (domed
+     bevel + engraved ring + raised glyph from a height map), then bends the view
+     by that normal, splits the colour channels, and adds fresnel and specular light.
+     ========================================================= */
+  const gcv = $("#glass"), hint = $("#coinHint");
+  const gl = gcv.getContext("webgl", { premultipliedAlpha: true, antialias: false });
+  const coin = { x: NaN, y: NaN, vx: 0, vy: 0, ang: 0.5, spin: 0, R: 80, T: 13, S: 260, drag: false, touched: false };
+  let prog = null, uni = {}, texScene = null, texGlyph = null, snap = null, sctx = null, gdpr = 1, prevW = 0, prevH = 0;
+
+  const VS = "attribute vec2 a; varying vec2 v; void main(){ v = a * 0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }";
+  const FS = `
+precision highp float;
+varying vec2 v;
+uniform sampler2D uScene, uGlyph;
+uniform vec2 uSize;
+uniform float uR, uT, uAng;
+
+vec3 scene(vec2 p) {                       // p: css px from the glass canvas's top-left
+  vec2 uv = vec2(p.x / uSize.x, 1.0 - p.y / uSize.y);
+  return texture2D(uScene, clamp(uv, vec2(0.002), vec2(0.998))).rgb;
+}
+float relief(vec2 q, bool front) {         // q: unit-disc coords, y down
+  vec4 g = texture2D(uGlyph, vec2(q.x * 0.5 + 0.5, 0.5 - q.y * 0.5));
+  return front ? g.r : g.g;
+}
+void main() {
+  vec2 p = vec2(v.x, 1.0 - v.y) * uSize;
+  vec2 d = p - uSize * 0.5;
+  float ca = cos(uAng), sa = sin(uAng), ac = max(abs(ca), 0.0001);
+  bool front = ca >= 0.0;
+  float sv = front ? sa : -sa;
+  float cvis = (front ? 0.5 : -0.5) * uT * sa, coth = -cvis;
+  float yy = d.y / uR;
+
+  vec2 sd = (d - vec2(uR * 0.06, uR * 0.16)) / vec2(uR * ac + abs(cvis) + uR * 0.08, uR * 1.02);
+  float shadow = 0.38 * (1.0 - smoothstep(0.55, 1.15, length(sd)));
+
+  float aw = uR * ac;
+  float row = sqrt(max(0.0, 1.0 - yy * yy));
+  float hw = row * aw;
+  float lo = min(cvis, coth) - hw, hi = max(cvis, coth) + hw;
+  float cover = clamp(min(d.x - lo, hi - d.x) + 0.5, 0.0, 1.0) * clamp((1.0 - abs(yy)) * uR + 0.5, 0.0, 1.0);
+  if (abs(yy) >= 1.0 || cover <= 0.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, shadow); return; }
+
+  vec3 n; vec2 q = vec2(0.0); float onRim = 0.0;
+  float fx = d.x - cvis;
+  if (abs(fx) <= hw + 0.5) {
+    q = vec2(fx / aw, yy);
+    float r = length(q);
+    vec2 dir = r > 0.0001 ? q / r : vec2(0.0);
+    float e = smoothstep(0.6, 1.0, r);
+    vec2 g = dir * (0.05 + e * e * 1.7);                 // domed face, rounded bevel
+    float ring = (r - 0.8) / 0.025;
+    g += dir * (-ring * exp(-ring * ring) * 0.6);         // engraved ring
+    float s = 3.2 / 128.0;
+    g -= vec2(relief(q + vec2(s, 0.0), front) - relief(q - vec2(s, 0.0), front),
+              relief(q + vec2(0.0, s), front) - relief(q - vec2(0.0, s), front)) * 1.5;  // raised glyph
+    vec3 nl = normalize(vec3(g, 1.0));
+    n = vec3(nl.x * ac + nl.z * sv, nl.y, nl.z * ac - nl.x * sv);
+  } else {
+    onRim = 1.0;                                          // the coin's edge, seen as it turns
+    float cphi = -sign(sa) * row;
+    n = normalize(vec3(cphi * ca, yy, max(-cphi * sa, 0.05)));
   }
-  home.addEventListener("pointermove", e => { if (reduce) return; tmx = e.clientX / W - 0.5; tmy = e.clientY / H - 0.5; });
-  home.addEventListener("pointerleave", () => { tmx = 0; tmy = 0; });
+
+  vec2 sp = p - n.xy * uR * mix(0.42, 0.55, onRim) - d * 0.12 * (1.0 - onRim);
+  vec2 split = n.xy * uR * 0.035;
+  vec3 col = vec3(scene(sp - split).r, scene(sp).g, scene(sp + split).b);
+  vec3 frost = (scene(sp + vec2(2.5, 0.0)) + scene(sp - vec2(2.5, 0.0)) + scene(sp + vec2(0.0, 2.5)) + scene(sp - vec2(0.0, 2.5))) * 0.25;
+  col = mix(col, frost, 0.35) * vec3(0.97, 0.99, 1.04) + vec3(0.025, 0.03, 0.05);
+
+  vec3 hv = normalize(normalize(vec3(-0.5, -0.65, 0.58)) + vec3(0.0, 0.0, 1.0));
+  float nh = max(dot(n, hv), 0.0);
+  col += vec3(pow(nh, 90.0) * 1.1 + pow(nh, 14.0) * 0.12);
+  col = mix(col, vec3(0.92, 0.93, 1.0), pow(1.0 - clamp(n.z, 0.0, 1.0), 2.5) * 0.5);
+  if (onRim > 0.5) {
+    col = col * (0.78 + 0.22 * (0.5 + 0.5 * sin(asin(clamp(yy, -1.0, 1.0)) * 70.0))) + vec3(0.05);   // reeded edge
+  } else {
+    float r = length(q);
+    col += vec3(0.5) * smoothstep(0.955, 0.99, r) * (1.0 - smoothstep(0.99, 1.0, r)) * (0.4 + 0.6 * max(-n.x - n.y, 0.0));
+  }
+  gl_FragColor = vec4(col * cover, cover + shadow * (1.0 - cover));
+}`;
+
+  function glInit() {
+    if (!gl) return false;
+    const sh = (type, src) => {
+      const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.warn(gl.getShaderInfoLog(s)); return null; }
+      return s;
+    };
+    const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+    if (!vs || !fs) return false;
+    prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, "a");
+    gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    ["uScene", "uGlyph", "uSize", "uR", "uT", "uAng"].forEach(n => uni[n] = gl.getUniformLocation(prog, n));
+    const tex = unit => {
+      const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    };
+    texScene = tex(0); texGlyph = tex(1);
+    gl.uniform1i(uni.uScene, 0); gl.uniform1i(uni.uGlyph, 1);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    snap = document.createElement("canvas"); sctx = snap.getContext("2d");
+    return true;
+  }
+  let glOK = false;
+  try { glOK = glInit(); } catch { glOK = false; }
+  if (!glOK) { gcv.hidden = true; hint.hidden = true; }
+
+  /* height maps for the two faces: "</>" in the red channel, initials in green */
+  function glyphs() {
+    const g = document.createElement("canvas"); g.width = g.height = 128;
+    const x = g.getContext("2d");
+    x.fillStyle = "#000"; x.fillRect(0, 0, 128, 128);
+    x.globalCompositeOperation = "lighter"; x.textAlign = "center"; x.textBaseline = "middle";
+    if ("filter" in x) x.filter = "blur(2px)";
+    x.fillStyle = "#f00"; x.font = `600 40px ${MONO}`; x.fillText("</>", 64, 66);
+    const initials = SITE.name.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
+    x.fillStyle = "#0f0"; x.font = `400 62px ${SERIF}`; x.fillText(initials, 64, 70);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texGlyph);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, g);
+  }
+
+  function glassResize() {
+    if (!glOK) return;
+    const c = coin;
+    c.R = Math.round(Math.max(56, Math.min(120, Math.min(W, H) * 0.11)));
+    c.T = c.R * 0.16;
+    c.S = Math.ceil(c.R * 2.9 + c.T);
+    gdpr = Math.min(2, devicePixelRatio || 1);
+    gcv.width = snap.width = Math.round(c.S * gdpr); gcv.height = snap.height = Math.round(c.S * gdpr);
+    gcv.style.width = gcv.style.height = c.S + "px";
+    if (isNaN(c.x)) { c.x = NL ? W / 2 + NL.total * 0.18 : W * 0.6; c.y = NL ? NL.cy : H * 0.45; }
+    else if (prevW) { c.x *= W / prevW; c.y *= H / prevH; }
+    prevW = W; prevH = H;
+    glyphs();
+  }
+
+  function glassFrame(now, dt) {
+    if (!glOK) return;
+    const c = coin;
+    if (!c.drag && !reduce) {
+      c.x += c.vx * dt; c.y += c.vy * dt;
+      const f = Math.pow(0.08, dt); c.vx *= f; c.vy *= f;          // glides to a stop
+      const m = c.R * 0.9;                                           // and bounces off the edges
+      if (c.x < m) { c.x = m; c.vx = Math.abs(c.vx) * 0.6; }
+      if (c.x > W - m) { c.x = W - m; c.vx = -Math.abs(c.vx) * 0.6; }
+      if (c.y < m) { c.y = m; c.vy = Math.abs(c.vy) * 0.6; }
+      if (c.y > H - m) { c.y = H - m; c.vy = -Math.abs(c.vy) * 0.6; }
+    }
+    if (!reduce) { c.spin *= Math.pow(0.3, dt); c.ang += (0.85 + c.spin) * dt; }
+    const S = c.S, left = c.x - S / 2, top = c.y - S / 2;
+    gcv.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
+    hint.style.transform = `translate(${c.x.toFixed(1)}px, ${(c.y + c.R + 16).toFixed(1)}px) translateX(-50%)`;
+    sctx.clearRect(0, 0, snap.width, snap.height);
+    sctx.drawImage(cv, left * dpr, top * dpr, S * dpr, S * dpr, 0, 0, snap.width, snap.height);
+    gl.viewport(0, 0, gcv.width, gcv.height);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texScene);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, snap);
+    gl.uniform2f(uni.uSize, S, S); gl.uniform1f(uni.uR, c.R); gl.uniform1f(uni.uT, c.T); gl.uniform1f(uni.uAng, c.ang);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /* drag it, throw it */
+  const onCoin = (x, y) => glOK && Math.hypot(x - coin.x, y - coin.y) < coin.R * 1.05;
+  let grab = null;
+  home.addEventListener("pointerdown", e => {
+    if (e.target.closest("a") || !onCoin(e.clientX, e.clientY)) return;
+    e.preventDefault();
+    grab = { id: e.pointerId, ox: e.clientX - coin.x, oy: e.clientY - coin.y, lt: performance.now() };
+    coin.drag = true; coin.vx = coin.vy = 0;
+    try { home.setPointerCapture(e.pointerId); } catch {}
+    home.classList.add("grabbing");
+    if (!coin.touched) { coin.touched = true; hint.textContent = "liquid glass · webgl shader"; }
+  });
+  home.addEventListener("pointermove", e => {
+    if (!grab || e.pointerId !== grab.id) { home.classList.toggle("grab", onCoin(e.clientX, e.clientY)); return; }
+    const now = performance.now(), dts = Math.max(1, now - grab.lt) / 1000;
+    const nx = Math.max(0, Math.min(W, e.clientX - grab.ox)), ny = Math.max(0, Math.min(H, e.clientY - grab.oy));
+    coin.vx = coin.vx * 0.6 + ((nx - coin.x) / dts) * 0.4; coin.vy = coin.vy * 0.6 + ((ny - coin.y) / dts) * 0.4;
+    if (reduce) coin.ang += (nx - coin.x) * 0.01; else coin.spin += (nx - coin.x) * 0.02;
+    coin.x = nx; coin.y = ny; grab.lt = now;
+    if (reduce) frame(now);
+  });
+  const release = e => {
+    if (!grab || e.pointerId !== grab.id) return;
+    if (performance.now() - grab.lt > 90) coin.vx = coin.vy = 0;  // held still before letting go
+    const sp = Math.hypot(coin.vx, coin.vy), max = 2600;
+    if (sp > max) { coin.vx *= max / sp; coin.vy *= max / sp; }
+    if (reduce) coin.vx = coin.vy = 0;
+    grab = null; coin.drag = false; home.classList.remove("grabbing");
+  };
+  home.addEventListener("pointerup", release);
+  home.addEventListener("pointercancel", release);
   home.querySelectorAll("[data-outline]").forEach(a => {
     const on = () => { outline = shown = a.dataset.outline; home.classList.add("peek"); if (reduce) frame(performance.now()); };
     const off = () => { outline = null; home.classList.remove("peek"); if (reduce) frame(performance.now()); };
@@ -812,6 +1041,7 @@ const Home = (() => {
     start() { if (running) return; running = true; resize(); if (!reduce) raf = requestAnimationFrame(frame); },
     stop() { running = false; cancelAnimationFrame(raf); },
     rebuild() { if (!home.hidden) resize(); },
+    reveal() { revealAt = reduce ? -Infinity : performance.now(); if (reduce && running) frame(performance.now()); },
   };
 })();
 
