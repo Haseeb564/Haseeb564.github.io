@@ -205,10 +205,7 @@ const SITE = {
   degree: "BSc (Hons) Software Engineering, First Class",
   where: "Manama, Bahrain · Golden Visa, no sponsorship needed · available now",
   education: [
-    { years: "Final year", title: "BSc (Hons) Software Engineering", org: "Liverpool John Moores University, UK",
-      note: "First Class Honours, 77% average. Capstone: a multi-tier Java application with MVC, a relational database and a REST API." },
-    { years: "Years 1–2", title: "BSc Software Engineering", org: "Curtin University, Perth",
-      note: "Transferred to LJMU for the final year of the same degree." },
+    { title: "BSc (Hons) Software Engineering", note: "First Class Honours" },
   ],
   email: "hrahat99@gmail.com",
   links: [["GitHub", "https://github.com/Haseeb564"], ["LinkedIn", "https://www.linkedin.com/in/haseeb-rahat-1ab870376/"], ["CV (PDF)", "https://haseeb564.github.io/assets/CV.pdf"]],
@@ -366,7 +363,7 @@ function renderInfo() {
     <p class="r-where">${esc(SITE.where)}</p>
     <p class="r-desc">${esc(SITE.bio)}</p>
     <div><p class="label">Education</p>${SITE.education.map(x =>
-      `<div class="xp"><span class="xp-years">${esc(x.years)}</span><span class="xp-role">${esc(x.title)}</span><span class="xp-note">${esc(x.org)}. ${esc(x.note)}</span></div>`).join("")}</div>
+      `<div class="xp">${x.years ? `<span class="xp-years">${esc(x.years)}</span>` : ""}<span class="xp-role">${esc(x.title)}</span><span class="xp-note">${[x.org, x.note].filter(Boolean).map(esc).join(". ")}</span></div>`).join("")}</div>
     <div><p class="label">Contact</p><div class="contact">
       <div class="contact-row"><code id="mail">${esc(SITE.email)}</code><button type="button" class="copy" id="copyMail">Copy email</button></div>
       <div class="contact-row r-links">${SITE.links.map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>`).join("")}</div>
