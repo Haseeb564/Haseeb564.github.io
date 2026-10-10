@@ -99,7 +99,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .r-stack li::before{content:"› ";color:var(--ink)}
 .r-links{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;font-weight:700}
 .r-links:empty{display:none}
-.r-where{margin:-10px 0 0;font-family:var(--f-mono);font-size:11px;line-height:1.5;color:var(--mute)}
 .r-notes ol{margin:0;padding-left:1.5em;display:grid;gap:8px;max-width:54ch;font-size:13px;line-height:1.5}
 .r-notes li::marker{font-family:var(--f-mono);font-size:11px;color:var(--mute)}
 .work.is-info .col-c > .fine{display:none}
@@ -207,7 +206,6 @@ const SITE = {
   blurb: "Software engineer and First Class Honours graduate. I build practical software across systems, databases and game development.",
   bio: "I'm a Software Engineering graduate with practical experience across the stack, from systems programming in C, C++ and Rust to Java back-end services, REST APIs and React front ends. I like building things from scratch, and right now I'm the sole developer of CodeCarbon, a dungeon crawler in Godot.",
   degree: "BSc (Hons) Software Engineering, First Class",
-  where: "Manama, Bahrain · Golden Visa, no sponsorship needed · available now",
   education: [
     { title: "BSc (Hons) Software Engineering", note: "First Class Honours" },
   ],
@@ -363,7 +361,6 @@ function renderInfo() {
   rHead.innerHTML = `<span class="r-kicker">$ whoami</span><h2 class="r-title">${esc(SITE.name)}</h2>`;
   rBody.innerHTML = `
     <p class="r-meta"><span>${esc(SITE.role)}</span><span>–</span><span>${esc(SITE.degree)}</span></p>
-    <p class="r-where">${esc(SITE.where)}</p>
     <p class="r-desc">${esc(SITE.bio)}</p>
     <div><p class="label">Education</p>${SITE.education.map(x =>
       `<div class="xp">${x.years ? `<span class="xp-years">${esc(x.years)}</span>` : ""}<span class="xp-role">${esc(x.title)}</span><span class="xp-note">${[x.org, x.note].filter(Boolean).map(esc).join(". ")}</span></div>`).join("")}</div>
