@@ -132,9 +132,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .case:focus-visible{outline:none}
 .case:focus-visible .front{outline:2px solid var(--hi);outline-offset:5px}
 .case .f{position:absolute;left:0;top:0;background-repeat:no-repeat;background-color:var(--case);backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.case .front{background-size:210.3% 100%;background-position:100% 0}
-.case .back{background-size:211% 100%;background-position:0 0}
-.case .spine{background-size:1980% 100%;background-position:49.92% 0}
+.case .front{background-position:100% 0}   /* background-size is set per case type in Shelf.geometry() */
+.case .back{background-position:0 0}
+.case .spine{background-position:50% 0}
+.case.t-switch .f{background-color:#c8202c}
+.case.t-ds .f{background-color:#2b2b30}
 .case .front::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(112deg,transparent 32%,rgba(255,255,255,.16) 47%,transparent 60%);background-size:280% 100%;
   background-position:calc(15% + var(--sheen,0) * 140%) 0}
@@ -317,7 +319,8 @@ const STACK = [
   ["Data + infra", ["MySQL", "PostgreSQL", "Docker", "Linux", "AWS / GCP", "Git"]],
   ["Games", ["Godot 4"]],
 ];
-/* Off-hours: favourite albums (and games later). Covers live in images/off-hours/. */
+/* Off-hours: favourite albums and games. Covers live in images/off-hours/. */
+const sortTitle = s => s.replace(/^the\s+/i, "");   // file "The Legend of Zelda" under L, as a shop would
 const OFFHOURS = [
   ["Low Roar", "Low Roar", "low-roar-low-roar"],
   ["Low Roar", "Once in a Long, Long While...", "low-roar-once-in-a-long-long-while"],
@@ -358,21 +361,44 @@ const OFFHOURS = [
  .sort((a, b) => a.artist.localeCompare(b.artist, "en", { sensitivity: "base", numeric: true })
               || a.title.localeCompare(b.title, "en", { sensitivity: "base", numeric: true }))    // A–Z by artist, then album
  .concat([
-  /* games: each image is a full case wrap (back | spine | front), shown as a 3D case */
-  ["Control: Ultimate Edition", "Remedy Entertainment", "control"],
-  ["Counter-Strike: Global Offensive", "Valve", "counter-strike-go"],
-  ["Cyberpunk 2077: Ultimate Edition", "CD Projekt Red", "cyberpunk-2077"],
-  ["Dark Souls III", "FromSoftware", "dark-souls-3"],
-  ["Death Stranding Director's Cut", "Kojima Productions", "death-stranding-directors-cut"],
-  ["Elden Ring", "FromSoftware", "elden-ring"],
-  ["Elden Ring Nightreign", "FromSoftware", "elden-ring-nightreign"],
-  ["Lies of P", "Round8 Studio", "lies-of-p"],
-  ["Monster Hunter Wilds", "Capcom", "monster-hunter-wilds"],
-  ["Monster Hunter: World", "Capcom", "monster-hunter-world"],
-  ["Tekken 7", "Bandai Namco", "tekken-7"],
-  ["Tekken 8", "Bandai Namco", "tekken-8"],
- ].map(([title, studio, file]) => ({ kind: "Games", title, artist: studio, img: `images/off-hours/games/${file}.jpg` }))
-  .sort((a, b) => a.title.localeCompare(b.title, "en", { sensitivity: "base", numeric: true })));   // A–Z by game
+  /* games: each image is a case wrap laid out back | spine | front at the exact sizes in CASE_MM */
+  ["Control: Ultimate Edition", "Remedy Entertainment", "PC", "control"],
+  ["Counter-Strike: Global Offensive", "Valve", "PC", "counter-strike-go"],
+  ["Cyberpunk 2077: Ultimate Edition", "CD Projekt Red", "PC", "cyberpunk-2077"],
+  ["Dark Souls III", "FromSoftware", "PC", "dark-souls-3"],
+  ["Death Stranding Director's Cut", "Kojima Productions", "PC", "death-stranding-directors-cut"],
+  ["Dishonored: Game of the Year Edition", "Arkane Studios", "PC", "dishonored"],
+  ["Elden Ring", "FromSoftware", "PC", "elden-ring"],
+  ["Elden Ring Nightreign", "FromSoftware", "PC", "elden-ring-nightreign"],
+  ["Fallout 4: Game of the Year Edition", "Bethesda Game Studios", "PC", "fallout-4"],
+  ["Fallout: New Vegas Ultimate Edition", "Obsidian Entertainment", "PC", "fallout-new-vegas"],
+  ["Final Fantasy XV Windows Edition", "Square Enix", "PC", "final-fantasy-xv"],
+  ["Lies of P", "Round8 Studio", "PC", "lies-of-p"],
+  ["Monster Hunter Rise: Deluxe Edition", "Capcom", "Nintendo Switch", "monster-hunter-rise"],
+  ["Monster Hunter Wilds", "Capcom", "PC", "monster-hunter-wilds"],
+  ["Monster Hunter: World", "Capcom", "PC", "monster-hunter-world"],
+  ["Pokémon Alpha Sapphire", "Game Freak", "Nintendo 3DS", "pokemon-alpha-sapphire"],
+  ["Pokémon Black Version 2", "Game Freak", "Nintendo DS", "pokemon-black-2"],
+  ["Pokémon Brilliant Diamond", "ILCA", "Nintendo Switch", "pokemon-brilliant-diamond"],
+  ["Pokémon FireRed Version", "Game Freak", "Game Boy Advance", "pokemon-firered"],
+  ["Pokémon Legends: Z-A", "Game Freak", "Nintendo Switch 2", "pokemon-legends-z-a"],
+  ["Pokémon Platinum Version", "Game Freak", "Nintendo DS", "pokemon-platinum"],
+  ["Pokémon Sun", "Game Freak", "Nintendo 3DS", "pokemon-sun"],
+  ["Pokémon Ultra Moon", "Game Freak", "Nintendo 3DS", "pokemon-ultra-moon"],
+  ["Pokémon White Version", "Game Freak", "Nintendo DS", "pokemon-white"],
+  ["Stardew Valley", "ConcernedApe", "PC", "stardew-valley"],
+  ["Tekken 7", "Bandai Namco", "PC", "tekken-7"],
+  ["Tekken 8", "Bandai Namco", "PC", "tekken-8"],
+  ["Terraria", "Re-Logic", "PC", "terraria"],
+  ["The Elder Scrolls V: Skyrim", "Bethesda Game Studios", "PC", "skyrim"],
+  ["The Legend of Zelda: A Link to the Past & Four Swords", "Nintendo", "Game Boy Advance", "zelda-a-link-to-the-past"],
+  ["The Legend of Zelda: The Minish Cap", "Capcom", "Game Boy Advance", "zelda-minish-cap"],
+  ["Warframe", "Digital Extremes", "PC", "warframe"],
+ ].map(([title, studio, platform, file]) => ({
+    kind: "Games", title, artist: studio, platform, img: `images/off-hours/games/${file}.jpg`,
+    caseType: platform === "PC" ? "pc" : /Switch/.test(platform) ? "switch" : "ds",   // GBA scans use the DS-case format
+  }))
+  .sort((a, b) => sortTitle(a.title).localeCompare(sortTitle(b.title), "en", { sensitivity: "base", numeric: true })));   // A–Z, ignoring "The"
 
 /* ========================================================= */
 const $ = s => document.querySelector(s);
@@ -1497,29 +1523,40 @@ const Shelf = (() => {
   const capK = $("#shelfKicker"), capA = $("#shelfArtist"), capT = $("#shelfAlbum");
   let items = [], nodes = [], pos = 0, target = 0, raf = 0, last = 0, centre = -1;
   let C = 220, s0 = 140, s1 = 66, drag = null, settle = 0;
-  /* game cases: width, height, depth (spine), gap between spines; spin = extra turn on the pulled-out case */
-  let mode = "covers", CW = 170, CH = 240, CD = 18, gap = 3, spin = 0, spinTo = 0;
+  /* game cases, real sizes in mm (width, height, depth): a DVD-style PC case, a Switch case,
+     and the DS case (3DS and the GBA scans share it). Cases stand on the line at true relative heights. */
+  const CASE_MM = { pc: [135, 190, 14], switch: [105, 170, 11], ds: [137, 123, 14] };
+  /* CH = height of the tallest (PC) case in px; CD = a PC spine, the drag unit; spin = extra turn on the pulled-out case */
+  let mode = "covers", CH = 240, CD = 18, gap = 3, spin = 0, spinTo = 0, slots = [];
 
   const isGame = p => p.kind === "Games";
-  const letterOf = p => { const ch = (isGame(p) ? p.title : p.artist || p.title).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(ch) ? ch : "#"; };
+  const letterOf = p => { const ch = (isGame(p) ? sortTitle(p.title) : p.artist || p.title).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(ch) ? ch : "#"; };
   const clampT = v => Math.max(0, Math.min(items.length - 1, v));
 
   function geometry() {
     const w = stage.clientWidth, h = stage.clientHeight;
     if (mode === "cases") {
       CH = Math.round(Math.max(150, Math.min(h * 0.84, (w * (mobileQ.matches ? 0.5 : 0.24)) / 0.709, 340)));
-      CW = Math.round(CH * 0.709); CD = Math.max(12, Math.round(CH * 0.075)); gap = Math.max(2, Math.round(CD * 0.14));
+      const k = CH / 190;                                  // px per mm
+      CD = Math.round(14 * k); gap = Math.max(2, Math.round(CD * 0.14));
       nodes.forEach(n => {
-        n.style.width = CW + "px"; n.style.height = CH + "px"; n.style.marginLeft = -CW / 2 + "px";
+        const [mw, mh, md] = CASE_MM[n._type];
+        const W = Math.round(mw * k), H = Math.round(mh * k), D = Math.max(8, Math.round(md * k));
+        n._d = { w: W, h: H, d: D };
+        n.style.width = W + "px"; n.style.height = H + "px"; n.style.marginLeft = -W / 2 + "px";
         const f = n._faces;
         const face = (el, w2, h2, l, t, tf) => { el.style.width = w2 + "px"; el.style.height = h2 + "px"; el.style.left = l + "px"; el.style.top = t + "px"; el.style.transform = tf; };
-        face(f.front, CW, CH, 0, 0, `translateZ(${CD / 2}px)`);
-        face(f.back, CW, CH, 0, 0, `rotateY(180deg) translateZ(${CD / 2}px)`);
-        face(f.spine, CD, CH, (CW - CD) / 2, 0, `rotateY(-90deg) translateZ(${CW / 2}px)`);
-        face(f.edge, CD, CH, (CW - CD) / 2, 0, `rotateY(90deg) translateZ(${CW / 2}px)`);
-        face(f.top, CW, CD, 0, (CH - CD) / 2, `rotateX(90deg) translateZ(${CH / 2}px)`);
-        face(f.bottom, CW, CD, 0, (CH - CD) / 2, `rotateX(-90deg) translateZ(${CH / 2}px)`);
+        face(f.front, W, H, 0, 0, `translateZ(${D / 2}px)`);
+        face(f.back, W, H, 0, 0, `rotateY(180deg) translateZ(${D / 2}px)`);
+        face(f.spine, D, H, (W - D) / 2, 0, `rotateY(-90deg) translateZ(${W / 2}px)`);
+        face(f.edge, D, H, (W - D) / 2, 0, `rotateY(90deg) translateZ(${W / 2}px)`);
+        face(f.top, W, D, 0, (H - D) / 2, `rotateX(90deg) translateZ(${H / 2}px)`);
+        face(f.bottom, W, D, 0, (H - D) / 2, `rotateX(-90deg) translateZ(${H / 2}px)`);
+        const T = 2 * mw + md;                             // the wrap is back | spine | front at these widths
+        f.front.style.backgroundSize = f.back.style.backgroundSize = `${(T / mw * 100).toFixed(3)}% 100%`;
+        f.spine.style.backgroundSize = `${(T / md * 100).toFixed(3)}% 100%`;
       });
+      slots = nodes.map((_, c) => layout(c));
       return;
     }
     C = Math.round(Math.max(110, Math.min(h * 0.8, w * (mobileQ.matches ? 0.52 : 0.3), 320)));
@@ -1527,12 +1564,24 @@ const Shelf = (() => {
     nodes.forEach(n => { n.style.width = n.style.height = C + "px"; n.style.marginLeft = -C / 2 + "px"; });
   }
 
+  /* where every case stands while case c is pulled out: c faces you at 0, the rest stand spine-out beside it */
+  function layout(c) {
+    const xs = new Array(nodes.length);
+    xs[c] = 0;
+    let r = nodes[c]._d.w / 2 + gap;
+    for (let i = c + 1; i < nodes.length; i++) { const d = nodes[i]._d.d; xs[i] = r + d / 2; r += d + gap; }
+    let l = nodes[c]._d.w / 2 + gap;
+    for (let i = c - 1; i >= 0; i--) { const d = nodes[i]._d.d; xs[i] = -(l + d / 2); l += d + gap; }
+    return xs;
+  }
+
   function render() {
+    const k0 = Math.floor(pos), k1 = Math.min(k0 + 1, nodes.length - 1), t = pos - k0;
     nodes.forEach((n, i) => {
       const d = i - pos, a = Math.abs(d), near = Math.min(a, 1), sg = Math.sign(d);
       if (mode === "cases") {
         /* spines out like a shelf; the one in the middle slides forward and turns to face you */
-        const x = sg * (near * (CW / 2 + CD / 2 + gap) + Math.max(a - 1, 0) * (CD + gap));
+        const x = slots[k0][i] + (slots[k1][i] - slots[k0][i]) * t;
         const rot = near * 90 + (i === centre ? spin : 0);
         const z = (1 - near) * CH * 0.24;
         n.style.transform = `translateX(${x.toFixed(1)}px) translateZ(${z.toFixed(1)}px) rotateY(${rot.toFixed(2)}deg)`;
@@ -1557,7 +1606,7 @@ const Shelf = (() => {
     if (i !== centre) { spin = spinTo = 0; }
     centre = i;
     capK.textContent = `${pad(i + 1)} / ${pad(items.length)}`;
-    if (isGame(p)) { capA.textContent = p.title; capT.textContent = p.artist; }      // game big, studio below
+    if (isGame(p)) { capA.textContent = p.title; capT.textContent = `${p.artist} · ${p.platform}`; }   // game big, studio and platform below
     else { capA.textContent = p.artist || p.title; capT.textContent = p.artist ? p.title : ""; }
     nodes.forEach((n, j) => { n.tabIndex = j === i ? 0 : -1; });
     const L = letterOf(p);
@@ -1589,7 +1638,8 @@ const Shelf = (() => {
       b.tabIndex = -1;
       b.setAttribute("aria-label", p.artist ? `${p.title} by ${p.artist}` : p.title);
       if (mode === "cases") {
-        b.className = "case";
+        b.className = "case t-" + p.caseType; b._type = p.caseType;
+        b.setAttribute("aria-label", `${p.title}, ${p.platform}`);
         b._faces = {};
         for (const k of ["front", "back", "spine", "edge", "top", "bottom"]) {
           const f = document.createElement("span"); f.className = "f " + k;
