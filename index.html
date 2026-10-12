@@ -1570,7 +1570,7 @@ const Shelf = (() => {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     pos = reduce ? target : pos + (target - pos) * (1 - Math.exp(-dt * 9));
     if (Math.abs(target - pos) < 0.0005) pos = target;
-    if (!drag || drag.kind !== "spin") spin = reduce ? spinTo : spin + (spinTo - spin) * (1 - Math.exp(-dt * 7));
+    spin = reduce ? spinTo : spin + (spinTo - spin) * (1 - Math.exp(-dt * 7));
     if (Math.abs(spinTo - spin) < 0.05) spin = spinTo;
     render();
     if (pos !== target || spin !== spinTo || drag) raf = requestAnimationFrame(tick); else { raf = 0; last = 0; }
@@ -1622,13 +1622,14 @@ const Shelf = (() => {
   }, { passive: false });
 
   /* drag / swipe, with a little fling on release; a tap brings that cover to the middle */
-  /* the pulled-out game case: drag spins it, a tap flips it to the back and back again */
-  const step = () => mode === "cases" ? CD + gap : s1 * 1.6;   // drag distance per item
+  /* dragging always slides the shelf; tapping the pulled-out game case flips it to the back and back again */
+  const step = () => mode === "cases" ? (CD + gap) * 2.2 : s1 * 1.6;   // drag distance per item
+  const flip = () => { spinTo = Math.round(spinTo / 180) % 2 ? spinTo - 180 : spinTo + 180; go(); };
   stage.addEventListener("pointerdown", e => {
     if (e.button !== 0 || !items.length) return;
     const node = e.target.closest(".disc, .case");
-    const kind = mode === "cases" && node && nodes.indexOf(node) === centre && Math.abs(pos - target) < 0.15 ? "spin" : "slide";
-    drag = { kind, id: e.pointerId, x: e.clientX, t0: target, s0: spin, moved: false, vx: 0, lx: e.clientX, lt: performance.now(), node };
+    const flipTap = mode === "cases" && node && nodes.indexOf(node) === centre && Math.abs(pos - target) < 0.15;
+    drag = { flipTap, id: e.pointerId, x: e.clientX, t0: target, moved: false, vx: 0, lx: e.clientX, lt: performance.now(), node };
     try { stage.setPointerCapture(e.pointerId); } catch {}
     stage.classList.add("dragging"); go();
   });
@@ -1638,20 +1639,15 @@ const Shelf = (() => {
     if (Math.abs(dx) > 5) drag.moved = true;
     drag.vx = drag.vx * 0.7 + ((e.clientX - drag.lx) / (Math.max(1, now - drag.lt) / 1000)) * 0.3;
     drag.lx = e.clientX; drag.lt = now;
-    if (drag.kind === "spin") { spin = drag.s0 + dx * 0.6; if (reduce) render(); return; }
     target = clampT(drag.t0 - dx / step());
     if (reduce) { pos = target; render(); }
   });
   const release = e => {
     if (!drag || e.pointerId !== drag.id) return;
-    const { kind, moved, vx, node, lt } = drag;
+    const { flipTap, moved, vx, node, lt } = drag;
     drag = null; stage.classList.remove("dragging");
-    if (kind === "spin") {
-      if (moved) spinTo = Math.round(spin / 180) * 180;            // settle on the front or the back
-      else spinTo = Math.round(spinTo / 180) % 2 ? spinTo - 180 : spinTo + 180;   // tap: flip
-      go(); return;
-    }
     if (moved) to(target - (performance.now() - lt < 90 ? vx / step() * 0.22 : 0));
+    else if (flipTap) flip();
     else if (node) to(nodes.indexOf(node));
     else to(target);
   };
@@ -1661,7 +1657,7 @@ const Shelf = (() => {
     if (e.detail !== 0) return;
     const n = e.target.closest(".disc, .case"); if (!n) return;
     const i = nodes.indexOf(n);
-    if (mode === "cases" && i === centre) { spinTo = Math.round(spinTo / 180) % 2 ? spinTo - 180 : spinTo + 180; go(); }
+    if (mode === "cases" && i === centre) flip();
     else to(i);
   });
 
@@ -1670,7 +1666,7 @@ const Shelf = (() => {
     if (c && (e.key === "Enter" || e.key === " ")) {                // div cases need their own Enter / Space
       e.preventDefault();
       const i = nodes.indexOf(c);
-      if (i === centre) { spinTo = Math.round(spinTo / 180) % 2 ? spinTo - 180 : spinTo + 180; go(); } else to(i);
+      if (i === centre) flip(); else to(i);
       return;
     }
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
