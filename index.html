@@ -101,6 +101,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .r-stack li::before{content:"› ";color:var(--ink)}
 .r-links{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;font-weight:700}
 .r-links:empty{display:none}
+.r-sub{margin:0;max-width:30ch;font-family:var(--f-display);font-weight:400;font-size:clamp(19px,1.75vw,27px);line-height:1.15;text-wrap:balance}
 .r-notes ol{margin:0;padding-left:1.5em;display:grid;gap:8px;max-width:54ch;font-size:13px;line-height:1.5}
 .r-notes li::marker{font-family:var(--f-mono);font-size:11px;color:var(--mute)}
 .work.is-info .col-c > .fine{display:none}
@@ -478,9 +479,10 @@ function setActive(el, silent) {
   state.active = el; el.classList.add("on");
   const p = state.list[+el.dataset.i];
   const n = state.list.indexOf(p) + 1;
-  rHead.innerHTML = `<span class="r-kicker">${pad(n)} / ${pad(state.list.length)}</span><h2 class="r-title">${esc(p.title)}</h2>`;
+  /* albums: the (shorter) artist sits above the line, the (longer) album name below it */
+  rHead.innerHTML = `<span class="r-kicker">${pad(n)} / ${pad(state.list.length)}</span><h2 class="r-title">${esc(p.artist || p.title)}</h2>`;
   rBody.innerHTML = `
-    <p class="r-meta">${p.artist ? `<span>${esc(p.artist)}</span>` : `<span>${esc(p.date)}</span><span>–</span><span>${esc(p.kind)}</span>`}</p>
+    ${p.artist ? `<p class="r-sub">${esc(p.title)}</p>` : `<p class="r-meta"><span>${esc(p.date)}</span><span>–</span><span>${esc(p.kind)}</span></p>`}
     ${p.summary ? `<p class="r-desc">${esc(p.summary)}</p>` : ""}
     ${p.notes ? `<div class="r-notes"><p class="label">${esc(p.notesTitle || "Notes")}</p><ol>${p.notes.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
     ${p.stack ? `<ul class="r-stack">${p.stack.map(s => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
