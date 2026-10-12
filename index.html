@@ -15,7 +15,7 @@
   /* home: one fixed look in every theme */
   --night:#0a0a0c; --ash:#18181c; --bone:#e9e7e1; --peri:#6f71d2; --lime:#d6e05a;
   /* drafting sheet: light */
-  --paper:#a8a9b1; --ink:#111116; --rule:rgba(17,17,22,.42); --mute:rgba(17,17,22,.64); --hi:#f7f7f3; --grain:.55;
+  --paper:#a8a9b1; --ink:#111116; --rule:rgba(17,17,22,.42); --mute:rgba(17,17,22,.64); --hi:#f7f7f3; --grain:.55; --shade:rgba(0,0,0,.5);
   --f-display:"Cormorant Garamond",Garamond,"Times New Roman",serif;
   --f-ui:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -115,6 +115,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .thumb{flex:none;display:block;width:min(100%,300px);aspect-ratio:16/10;max-width:100%;position:relative;opacity:.62;transition:opacity .3s,transform .45s cubic-bezier(.2,.8,.2,1)}
 .thumb canvas,.thumb img{display:block;width:100%;height:100%}
 .thumb.sq{aspect-ratio:1}
+
+/* Off-hours shelf: covers stand on the reading line and flip past like records in a crate */
+.shelf{position:absolute;z-index:2;left:33.5%;right:0;top:0;bottom:0}
+.work.is-shelf .col-c{border-right-color:transparent}
+.work.is-shelf #rHead,.work.is-shelf #rBody,.work.is-shelf .col-c > .fine,.work.is-shelf .strip{display:none}
+.work.is-shelf .filters{z-index:3}
+.shelf-stage{position:absolute;left:0;right:0;top:0;height:var(--line);overflow:hidden;perspective:1100px;perspective-origin:50% 80%;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.shelf-stage.dragging{cursor:grabbing}
+.disc{position:absolute;left:50%;bottom:0;padding:0;transform-origin:50% 100%;will-change:transform,opacity;background:var(--rule);box-shadow:0 16px 26px -14px var(--shade)}
+.disc img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.disc:focus-visible{outline:2px solid var(--hi);outline-offset:5px}
+.shelf-below{position:absolute;left:var(--g);right:var(--g);top:calc(var(--line) + 20px);display:grid;justify-items:center;gap:26px}
+.shelf-caption{display:grid;justify-items:center;gap:6px;text-align:center;transition:opacity .35s,transform .45s cubic-bezier(.2,.8,.2,1)}
+.shelf-caption.swap{opacity:0;transform:translateY(8px);transition-duration:0s}
+.shelf-caption .r-kicker{margin:0 0 2px}
+.shelf-caption .r-sub{max-width:36ch}
+.shelf-az{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:100%}
+.shelf-az button{min-width:30px;height:30px;padding:0 6px;font-family:var(--f-mono);font-size:12px;color:var(--mute);border:1px solid transparent;transition:color .2s,border-color .2s}
+.shelf-az button:hover{color:var(--ink)}
+.shelf-az button.on{color:var(--ink);border-color:var(--ink)}
 .thumb img{object-fit:cover;background:var(--rule)}
 .thumb:hover{opacity:.9}
 .thumb.on{opacity:1;transform:translateX(10px)}
@@ -156,6 +176,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .r-head{transform:none}
   .r-body{overflow:visible}
   .work.is-info .col-r{order:4}
+  .work.is-shelf .col-c,.work.is-shelf .col-r{display:none}
+  .shelf{position:relative;left:auto;right:auto;top:auto;bottom:auto;order:2;padding-top:14px}
+  .shelf-stage{position:relative;height:min(80vw,380px)}
+  .shelf-stage::after{content:"";position:absolute;left:0;right:0;bottom:0;border-top:1px solid var(--rule)}
+  .shelf-below{position:static;padding:20px 16px 0;gap:20px}
+  .shelf-az{flex-wrap:nowrap;justify-content:flex-start;justify-self:stretch;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
   .strip.is-info{top:auto;flex-direction:column;overflow:visible;padding:20px 16px 0}
   .col-c > .fine{margin-top:18px}
 }
@@ -197,6 +223,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <p class="fine">© 2026 Haseeb Rahat.<br>Built with plain HTML, CSS and canvas.</p>
   </div>
   <div class="col col-r"><div class="strip" id="strip" aria-label="Project list"></div></div>
+  <div class="shelf" id="shelf" hidden>
+    <div class="shelf-stage" id="shelfStage" role="group" aria-label="Albums. Use the arrow keys to browse."></div>
+    <div class="shelf-below">
+      <div class="shelf-caption" id="shelfCaption" aria-live="polite"><span class="r-kicker" id="shelfKicker"></span><h2 class="r-title" id="shelfArtist"></h2><p class="r-sub" id="shelfAlbum"></p></div>
+      <nav class="shelf-az" id="shelfAZ" aria-label="Jump to an artist by letter"></nav>
+    </div>
+  </div>
 </section>
 
 <script>
@@ -383,13 +416,17 @@ function renderWork(page) {
   strip.classList.toggle("is-info", page === "info");
   strip.setAttribute("aria-label", { info: "Experience", lab: "Experiment list", "off-hours": "Favourite albums" }[page] || "Project list");
   strip.removeAttribute("style"); strip.scrollTop = 0; strip.scrollLeft = 0;
+  const shelfMode = page === "off-hours";
+  work.classList.toggle("is-shelf", shelfMode);
+  if (!shelfMode) Shelf.hide();
   if (page === "info") { filters.hidden = true; renderInfo(); return; }
-  state.list = page === "lab" ? LAB : page === "off-hours" ? OFFHOURS : PROJECTS;
+  state.list = page === "lab" ? LAB : shelfMode ? OFFHOURS : PROJECTS;
   state.filter = "All"; state.active = null;
   const kinds = ["All", ...new Set(state.list.map(p => p.kind))];
   filters.hidden = kinds.length < 3;   // nothing to filter while everything is one kind
   filters.innerHTML = kinds.map(k => `<button type="button" aria-pressed="${k === "All"}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
   strip.innerHTML = "";
+  if (shelfMode) { Shelf.show(state.list); return; }
   state.list.forEach((p, i) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "thumb"; b.dataset.i = i; b.dataset.kind = p.kind;
@@ -511,6 +548,7 @@ filters.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   state.filter = b.dataset.k;
   filters.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  if (state.mode === "off-hours") { Shelf.show(state.list.filter(p => state.filter === "All" || p.kind === state.filter)); return; }
   strip.querySelectorAll(".thumb").forEach(t => t.hidden = !(state.filter === "All" || t.dataset.kind === state.filter));
   layoutStrip();
   const first = visibleThumbs()[0];
@@ -518,7 +556,7 @@ filters.addEventListener("click", e => {
 });
 /* desktop: the wheel anywhere on the sheet drives the strip */
 work.addEventListener("wheel", e => {
-  if (mobileQ.matches || state.mode === "info" || strip.contains(e.target)) return;
+  if (mobileQ.matches || state.mode === "info" || state.mode === "off-hours" || strip.contains(e.target)) return;
   if (rBody.contains(e.target) && rBody.scrollHeight > rBody.clientHeight + 2) return;
   strip.scrollTop += e.deltaY; e.preventDefault();
 }, { passive: false });
@@ -1411,6 +1449,140 @@ const Draft = (() => {
     stop() { running = false; cancelAnimationFrame(raf); },
     reseed(seed) { tgt = gen(seed); if (!cur || reduce) cur = tgt.slice(); if (reduce) draw(0); },
     refresh() { ink = css("--ink"); if (reduce) draw(0); },
+  };
+})();
+
+/* =========================================================
+   SHELF: Off-hours as a cover-flow shelf standing on the reading line.
+   `pos` is a continuous index (which cover is centred); it eases toward
+   `target`, which the wheel, drags, arrow keys, clicks and the A–Z bar move.
+   ========================================================= */
+const Shelf = (() => {
+  const el = $("#shelf"), stage = $("#shelfStage"), az = $("#shelfAZ"), cap = $("#shelfCaption");
+  const capK = $("#shelfKicker"), capA = $("#shelfArtist"), capT = $("#shelfAlbum");
+  let items = [], nodes = [], pos = 0, target = 0, raf = 0, last = 0, centre = -1;
+  let C = 220, s0 = 140, s1 = 66, drag = null, settle = 0;
+
+  const letterOf = p => { const ch = (p.artist || p.title).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(ch) ? ch : "#"; };
+  const clampT = v => Math.max(0, Math.min(items.length - 1, v));
+
+  function geometry() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    C = Math.round(Math.max(110, Math.min(h * 0.8, w * (mobileQ.matches ? 0.52 : 0.3), 320)));
+    s0 = C * 0.64; s1 = C * 0.3;                       // gap to the first neighbour, then to each one after
+    nodes.forEach(n => { n.style.width = n.style.height = C + "px"; n.style.marginLeft = -C / 2 + "px"; });
+  }
+
+  function render() {
+    nodes.forEach((n, i) => {
+      const d = i - pos, a = Math.abs(d), near = Math.min(a, 1), sg = Math.sign(d);
+      const x = sg * (near * s0 + Math.max(a - 1, 0) * s1);
+      const op = a > 7 ? Math.max(0, 1 - (a - 7) / 1.5) : 1;
+      n.style.transform = `translateX(${x.toFixed(1)}px) translateZ(${(-near * 90).toFixed(1)}px) rotateY(${(sg * near * 58).toFixed(2)}deg) scale(${(1 - near * 0.2).toFixed(3)})`;
+      n.style.zIndex = String(1000 - Math.round(a * 10));
+      n.style.opacity = op.toFixed(3);
+      n.style.visibility = op <= 0 ? "hidden" : "visible";
+    });
+    const c = Math.round(pos);
+    if (c !== centre) caption(c, Math.abs(target - pos) > 0.6);   // no fade while flicking past several
+  }
+
+  function caption(i, instant) {
+    const p = items[i]; if (!p) return;
+    centre = i;
+    capK.textContent = `${pad(i + 1)} / ${pad(items.length)}`;
+    capA.textContent = p.artist || p.title; capT.textContent = p.artist ? p.title : "";
+    nodes.forEach((n, j) => { n.tabIndex = j === i ? 0 : -1; });
+    const L = letterOf(p);
+    az.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.l === L));
+    Draft.reseed(hash(p.title));
+    if (!instant && !reduce) { cap.classList.add("swap"); void cap.offsetWidth; setTimeout(() => cap.classList.remove("swap"), 30); }
+  }
+
+  function tick(now) {
+    const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+    pos = reduce ? target : pos + (target - pos) * (1 - Math.exp(-dt * 9));
+    if (Math.abs(target - pos) < 0.0005) pos = target;
+    render();
+    if (pos !== target || drag) raf = requestAnimationFrame(tick); else { raf = 0; last = 0; }
+  }
+  const go = () => { if (!raf) raf = requestAnimationFrame(tick); };
+  const to = i => { target = clampT(Math.round(i)); go(); };
+
+  function build(list) {
+    items = list; stage.innerHTML = "";
+    nodes = items.map((p, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "disc"; b.tabIndex = -1;
+      b.setAttribute("aria-label", p.artist ? `${p.title} by ${p.artist}` : p.title);
+      const im = new Image(); im.src = p.img; im.alt = ""; im.decoding = "async"; im.draggable = false;
+      im.loading = i < 12 ? "eager" : "lazy"; im.width = im.height = 400;
+      b.append(im); stage.append(b);
+      return b;
+    });
+    az.innerHTML = [...new Set(items.map(letterOf))].map(l => `<button type="button" data-l="${l}" aria-label="Jump to ${l}">${l}</button>`).join("");
+    pos = target = 0; centre = -1;
+    geometry(); render(); caption(0, true);
+  }
+
+  /* wheel: vertical or sideways scrolling both walk the shelf, then it settles on a cover */
+  work.addEventListener("wheel", e => {
+    if (state.mode !== "off-hours" || el.hidden || !items.length) return;
+    e.preventDefault();
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    target = clampT(target + d / (e.deltaMode === 1 ? 3 : e.deltaMode === 2 ? 1 : 100));
+    clearTimeout(settle); settle = setTimeout(() => to(target), 140);
+    go();
+  }, { passive: false });
+
+  /* drag / swipe, with a little fling on release; a tap brings that cover to the middle */
+  stage.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || !items.length) return;
+    drag = { id: e.pointerId, x: e.clientX, t0: target, moved: false, vx: 0, lx: e.clientX, lt: performance.now(), node: e.target.closest(".disc") };
+    try { stage.setPointerCapture(e.pointerId); } catch {}
+    stage.classList.add("dragging"); go();
+  });
+  stage.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, now = performance.now();
+    if (Math.abs(dx) > 5) drag.moved = true;
+    drag.vx = drag.vx * 0.7 + ((e.clientX - drag.lx) / (Math.max(1, now - drag.lt) / 1000)) * 0.3;
+    drag.lx = e.clientX; drag.lt = now;
+    target = clampT(drag.t0 - dx / (s1 * 1.6));
+    if (reduce) { pos = target; render(); }
+  });
+  const release = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { moved, vx, node, lt } = drag;
+    drag = null; stage.classList.remove("dragging");
+    if (moved) to(target - (performance.now() - lt < 90 ? vx / (s1 * 1.6) * 0.22 : 0));
+    else if (node) to(nodes.indexOf(node));
+    else to(target);
+  };
+  stage.addEventListener("pointerup", release);
+  stage.addEventListener("pointercancel", release);
+  stage.addEventListener("click", e => { if (e.detail === 0) { const n = e.target.closest(".disc"); if (n) to(nodes.indexOf(n)); } });  // keyboard Enter
+
+  el.addEventListener("keydown", e => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    let next = null;
+    if (step) next = Math.round(target) + step;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = items.length - 1;
+    if (next === null || e.target.closest(".shelf-az")) return;
+    e.preventDefault(); to(next);
+    const n = nodes[clampT(next)]; if (n) n.focus({ preventScroll: true });
+  });
+  az.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const i = items.findIndex(p => letterOf(p) === b.dataset.l);
+    if (i >= 0) to(i);
+  });
+  addEventListener("resize", () => { if (!el.hidden) { geometry(); render(); } });
+
+  return {
+    show(list) { el.hidden = false; build(list); },
+    hide() { el.hidden = true; cancelAnimationFrame(raf); raf = 0; drag = null; },
   };
 })();
 
