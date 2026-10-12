@@ -321,6 +321,9 @@ const STACK = [
 ];
 /* Off-hours: favourite albums and games. Covers live in images/off-hours/. */
 const sortTitle = s => s.replace(/^the\s+/i, "");   // file "The Legend of Zelda" under L, as a shop would
+/* shelf order for games, newest Nintendo first so the cases step down in height; short names label the jump bar */
+const CONSOLES = ["PC", "Nintendo Switch 2", "Nintendo Switch", "Nintendo 3DS", "Nintendo DS", "Game Boy Advance"];
+const CONSOLE_SHORT = { "PC": "PC", "Nintendo Switch 2": "Switch 2", "Nintendo Switch": "Switch", "Nintendo 3DS": "3DS", "Nintendo DS": "DS", "Game Boy Advance": "GBA" };
 const OFFHOURS = [
   ["Low Roar", "Low Roar", "low-roar-low-roar"],
   ["Low Roar", "Once in a Long, Long While...", "low-roar-once-in-a-long-long-while"],
@@ -398,7 +401,8 @@ const OFFHOURS = [
     kind: "Games", title, artist: studio, platform, img: `images/off-hours/games/${file}.jpg`,
     caseType: platform === "PC" ? "pc" : /Switch/.test(platform) ? "switch" : "ds",   // GBA scans use the DS-case format
   }))
-  .sort((a, b) => sortTitle(a.title).localeCompare(sortTitle(b.title), "en", { sensitivity: "base", numeric: true })));   // A–Z, ignoring "The"
+  .sort((a, b) => CONSOLES.indexOf(a.platform) - CONSOLES.indexOf(b.platform)       // grouped by console,
+               || sortTitle(a.title).localeCompare(sortTitle(b.title), "en", { sensitivity: "base", numeric: true })));   // then A–Z ignoring "The"
 
 /* ========================================================= */
 const $ = s => document.querySelector(s);
@@ -1530,7 +1534,13 @@ const Shelf = (() => {
   let mode = "covers", CH = 240, CD = 18, gap = 3, spin = 0, spinTo = 0, slots = [];
 
   const isGame = p => p.kind === "Games";
-  const letterOf = p => { const ch = (isGame(p) ? sortTitle(p.title) : p.artist || p.title).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(ch) ? ch : "#"; };
+  /* the jump bar: consoles on the games shelf, first letters of the artist on the music shelf */
+  const letterOf = p => {
+    if (isGame(p)) return CONSOLE_SHORT[p.platform] || p.platform;
+    const ch = (p.artist || p.title).trim().charAt(0).toUpperCase(); return /[A-Z]/.test(ch) ? ch : "#";
+  };
+  /* space between two neighbouring cases: wider where one console's games end and the next begin */
+  const gapAt = (i, j) => gap + (items[i] && items[j] && items[i].platform !== items[j].platform ? Math.round(CD * 1.4) : 0);
   const clampT = v => Math.max(0, Math.min(items.length - 1, v));
 
   function geometry() {
@@ -1568,10 +1578,10 @@ const Shelf = (() => {
   function layout(c) {
     const xs = new Array(nodes.length);
     xs[c] = 0;
-    let r = nodes[c]._d.w / 2 + gap;
-    for (let i = c + 1; i < nodes.length; i++) { const d = nodes[i]._d.d; xs[i] = r + d / 2; r += d + gap; }
-    let l = nodes[c]._d.w / 2 + gap;
-    for (let i = c - 1; i >= 0; i--) { const d = nodes[i]._d.d; xs[i] = -(l + d / 2); l += d + gap; }
+    let r = nodes[c]._d.w / 2 + gapAt(c, c + 1);
+    for (let i = c + 1; i < nodes.length; i++) { const d = nodes[i]._d.d; xs[i] = r + d / 2; r += d + gapAt(i, i + 1); }
+    let l = nodes[c]._d.w / 2 + gapAt(c - 1, c);
+    for (let i = c - 1; i >= 0; i--) { const d = nodes[i]._d.d; xs[i] = -(l + d / 2); l += d + gapAt(i - 1, i); }
     return xs;
   }
 
@@ -1656,7 +1666,8 @@ const Shelf = (() => {
       return b;
     });
     spin = spinTo = 0;
-    az.innerHTML = [...new Set(items.map(letterOf))].map(l => `<button type="button" data-l="${l}" aria-label="Jump to ${l}">${l}</button>`).join("");
+    az.innerHTML = [...new Set(items.map(letterOf))].map(l => `<button type="button" data-l="${esc(l)}" aria-label="Jump to ${esc(l)}">${esc(l)}</button>`).join("");
+    az.setAttribute("aria-label", mode === "cases" ? "Jump to a console" : "Jump to an artist by letter");
     pos = target = 0; centre = -1;
     geometry(); render(); caption(0, true);
   }
