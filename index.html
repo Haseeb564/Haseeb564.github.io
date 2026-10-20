@@ -691,15 +691,49 @@ const Home = (() => {
     follow(a);
   }
 
-  /* sharks cruise their own lane: across the screen, a turn just off the edge, and back. Fish schools
-     wander between random points. Everyone gives other sharks room and shies away from the cursor. */
-  function steer(a, dt, t, turn, margin, others) {
+  /* ---- the loop each shark circles: a racetrack (straight sides, round ends) fitted inside the
+     window, so it stretches on an ultrawide and stands upright on a phone ---- */
+  function track(inset) {
+    const horiz = W >= H, hw = W / 2 - inset, hh = H / 2 - inset;
+    const R = Math.max(40, horiz ? hh : hw), a = Math.max(0, (horiz ? hw : hh) - R);
+    return { cx: W / 2, cy: H / 2, R, a, horiz, len: 4 * a + TAU * R };
+  }
+  /* the point at distance s along the track, starting at the left end of the top straight */
+  function trackAt(k, s) {
+    const { a, R } = k; let x, y;
+    s = ((s % k.len) + k.len) % k.len;
+    if (s < 2 * a) { x = s - a; y = -R; }
+    else if ((s -= 2 * a) < Math.PI * R) { const q = s / R - Math.PI / 2; x = a + R * Math.cos(q); y = R * Math.sin(q); }
+    else if ((s -= Math.PI * R) < 2 * a) { x = a - s; y = R; }
+    else { const q = (s - 2 * a) / R + Math.PI / 2; x = -a + R * Math.cos(q); y = R * Math.sin(q); }
+    return k.horiz ? { x: k.cx + x, y: k.cy + y } : { x: k.cx + y, y: k.cy + x };
+  }
+  /* how far along the track the point nearest to (px, py) is */
+  function trackS(k, px, py) {
+    let x = px - k.cx, y = py - k.cy; if (!k.horiz) [x, y] = [y, x];
+    const { a, R } = k;
+    if (x >= -a && x <= a) return y < 0 ? x + a : 2 * a + Math.PI * R + (a - x);
+    if (x > a) return 2 * a + (Math.atan2(y, x - a) + Math.PI / 2) * R;
+    let q = Math.atan2(y, x + a); if (q < 0) q += TAU;
+    return 4 * a + Math.PI * R + (q - Math.PI / 2) * R;
+  }
+
+  /* sharks circle their track, chasing a point a little ahead on it. Fish schools wander between
+     random points on screen. Everyone gives other sharks room and shies away from the cursor. */
+  function steer(a, dt, t, turn, others) {
     const h = a.sp[0];
-    if (t > a.next || Math.hypot(a.tx - h.x, a.ty - h.y) < a.L * 0.4) {
-      if (a.lane) { a.tx = h.x < W / 2 ? W + margin : -margin; a.ty = H * rand(a.lane[0], a.lane[1]); a.next = t + rand(16, 26); }
-      else { a.tx = rand(-margin, W + margin); a.ty = rand(H * 0.1, H * 0.9); a.next = t + rand(6, 12); }
+    let want;
+    if (a.orbit) {
+      const o = a.orbit, k = track(o.inset * (1 + 0.12 * Math.sin(t * 0.05 + o.ph)));   // the loop slowly breathes
+      const g = trackAt(k, trackS(k, h.x, h.y) + o.dir * (a.L * 0.3 + k.R * 0.25));
+      want = Math.atan2(g.y - h.y, g.x - h.x);
+      turn = Math.max(turn, 1.3 * a.v / k.R);            // always able to make the round ends
+    } else {
+      if (t > a.next || Math.hypot(a.tx - h.x, a.ty - h.y) < a.L * 0.4) {
+        a.tx = rand(W * 0.1, W * 0.9); a.ty = rand(H * 0.12, H * 0.88); a.next = t + rand(6, 12);
+      }
+      want = Math.atan2(a.ty - h.y, a.tx - h.x);
     }
-    let want = Math.atan2(a.ty - h.y, a.tx - h.x);
     for (const b of others) {
       if (b === a || !b.far !== !a.far) continue;
       const dx = h.x - b.sp[0].x, dy = h.y - b.sp[0].y;
@@ -709,6 +743,9 @@ const Home = (() => {
       const dx = h.x - mouse.x, dy = h.y - mouse.y;
       if (Math.hypot(dx, dy) < a.L * 0.7 + 90) { want = Math.atan2(dy, dx); a.boost = Math.min(1, a.boost + dt * 3); }
     }
+    /* never swim out of the window: near an edge, head back toward the middle */
+    const m = a.orbit ? a.orbit.inset * 0.55 : a.L;
+    if (h.x < m || h.x > W - m || h.y < m || h.y > H - m) want = Math.atan2(H / 2 - h.y, W / 2 - h.x);
     a.a = turnBy(a.a, want, turn * (1 + a.boost) * dt);
     a.boost = Math.max(0, a.boost - dt * 0.5);
     a.v = a.base * (1 + a.boost * 1.6);
@@ -728,8 +765,8 @@ const Home = (() => {
 
   function swim(dt, t) {
     const o = ocean;
-    o.sharks.forEach(a => steer(a, dt, t, a.far ? 0.45 : 0.32, a.L * 0.5, o.sharks));
-    o.schools.forEach(s => { steer(s, dt, t, 1.1, s.L * 4, []); s.fish.forEach(f => school(s, f, dt, t)); });
+    o.sharks.forEach(a => steer(a, dt, t, a.far ? 0.45 : 0.32, o.sharks));
+    o.schools.forEach(s => { steer(s, dt, t, 1.1, []); s.fish.forEach(f => school(s, f, dt, t)); });
     o.snow.forEach(p => {                                // marine snow drifting up through the water
       p.y -= p.v * dt; p.x += Math.sin(t * 0.3 + p.s * 9) * 4 * dt;
       if (p.y < -20) { p.y = H + 20; p.x = rand(0, W); }
@@ -742,13 +779,21 @@ const Home = (() => {
     const cw = Math.max(5, ctx.measureText("M").width), ch = Math.round(fs * 1.1);
     const cols = Math.ceil(W / cw), rows = Math.ceil(H / ch);
     buf.width = cols; buf.height = rows;
-    const sharks = [
-      animal("hammerhead", S * 0.62, W * 0.22, H * 0.3, 0.25, S * 0.075, 22),
-      animal("reef", S * 0.5, W * 0.82, H * 0.74, Math.PI + 0.3, S * 0.085, 22),
-      animal("reef", S * 0.26, W * 0.64, H * 0.16, Math.PI - 0.2, S * 0.06, 16),
-    ];
-    sharks[2].far = true;                                // smaller and dimmer, further off
-    sharks[0].lane = [0.1, 0.34]; sharks[1].lane = [0.64, 0.9]; sharks[2].lane = [0.3, 0.7];
+    /* big sharks share the outer loop, evenly spaced and the same speed so they never bunch up
+       (a third joins on very wide screens); a small dim one circles a tighter loop the other way */
+    const onTrack = (kind, L, speed, joints, orbit, s0) => {
+      const k = track(orbit.inset), p = trackAt(k, s0), q = trackAt(k, s0 + orbit.dir);
+      const sh = animal(kind, L, p.x, p.y, Math.atan2(q.y - p.y, q.x - p.x), speed, joints);
+      sh.orbit = orbit; return sh;
+    };
+    const big = W > H * 2 ? 3 : 2, minWH = Math.min(W, H), sharks = [];
+    const ring = { inset: S * 0.52 * 0.24 + minWH * 0.04, dir: 1, ph: rand(0, TAU) };   // one shared loop
+    for (let i = 0; i < big; i++) {
+      sharks.push(onTrack(i ? "reef" : "hammerhead", S * (i ? 0.44 : 0.52), S * 0.08, 22, ring, track(ring.inset).len * i / big));
+    }
+    const far = onTrack("reef", S * 0.24, S * 0.06, 16, { inset: minWH * 0.3, dir: -1, ph: rand(0, TAU) }, rand(0, 1000));
+    far.far = true;                                      // smaller and dimmer, further off
+    sharks.push(far);
     const schools = [0, 1].map(k => {
       const s = animal("lead", S * 0.04, W * (k ? 0.12 : 0.9), H * (k ? 0.84 : 0.42), k ? -0.4 : Math.PI, S * 0.13, 2);
       s.fish = Array.from({ length: mob ? 6 : 9 }, () => {
@@ -779,7 +824,7 @@ const Home = (() => {
       }
     });
     ocean = { cw, ch, cols, rows, fs, sharks, schools, snow, grid, calm, eyes: [] };
-    for (let i = 0; i < 300; i++) swim(1 / 60, i / 60);   // a few seconds of swimming, so the first frame looks natural
+    for (let i = 0; i < 480; i++) swim(1 / 60, i / 60);   // a few seconds of swimming, so the first frame looks natural
   }
 
   /* ---- painting into the buffer ---- */
@@ -957,7 +1002,6 @@ const Home = (() => {
   /* the sharks steer by the frame clock (+5 s, after the warm-up swim), so the cursor's "scare" window uses it too */
   home.addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.until = (performance.now() - t0) / 1000 + 5 + 2.5; });
   home.addEventListener("pointerleave", () => { mouse.until = 0; });
-
   /* ---- the name, painted into the canvas so the glass can bend it ---- */
   function layoutName() {
     const fs = mobileQ.matches ? W * 0.245 : Math.max(84, Math.min(W * 0.215, 420));
