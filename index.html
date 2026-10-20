@@ -675,7 +675,7 @@ const Home = (() => {
   function animal(kind, L, x, y, heading, speed, joints) {
     const seg = L / (joints - 1), sp = [];
     for (let i = 0; i < joints; i++) sp.push({ x: x - Math.cos(heading) * seg * i, y: y - Math.sin(heading) * seg * i });
-    return { kind, L, seg, sp, a: heading, base: speed, v: speed, boost: 0, phase: rand(0, TAU), tx: x, ty: y, next: 0 };
+    return { kind, L, seg, sp, a: heading, base: speed, v: speed, boost: 0, phase: rand(0, TAU), tx: x, ty: y, next: 0, out: 0, w1: rand(0, TAU), w2: rand(0, TAU) };
   }
   /* each joint stays one segment behind the joint before it, so the body bends through turns */
   function follow(a) {
@@ -691,62 +691,61 @@ const Home = (() => {
     follow(a);
   }
 
-  /* ---- the loop each shark circles: a racetrack (straight sides, round ends) fitted inside the
-     window, so it stretches on an ultrawide and stands upright on a phone ---- */
-  function track(inset) {
-    const horiz = W >= H, hw = W / 2 - inset, hh = H / 2 - inset;
-    const R = Math.max(40, horiz ? hh : hw), a = Math.max(0, (horiz ? hw : hh) - R);
-    return { cx: W / 2, cy: H / 2, R, a, horiz, len: 4 * a + TAU * R };
-  }
-  /* the point at distance s along the track, starting at the left end of the top straight */
-  function trackAt(k, s) {
-    const { a, R } = k; let x, y;
-    s = ((s % k.len) + k.len) % k.len;
-    if (s < 2 * a) { x = s - a; y = -R; }
-    else if ((s -= 2 * a) < Math.PI * R) { const q = s / R - Math.PI / 2; x = a + R * Math.cos(q); y = R * Math.sin(q); }
-    else if ((s -= Math.PI * R) < 2 * a) { x = a - s; y = R; }
-    else { const q = (s - 2 * a) / R + Math.PI / 2; x = -a + R * Math.cos(q); y = R * Math.sin(q); }
-    return k.horiz ? { x: k.cx + x, y: k.cy + y } : { x: k.cx + y, y: k.cy + x };
-  }
-  /* how far along the track the point nearest to (px, py) is */
-  function trackS(k, px, py) {
-    let x = px - k.cx, y = py - k.cy; if (!k.horiz) [x, y] = [y, x];
-    const { a, R } = k;
-    if (x >= -a && x <= a) return y < 0 ? x + a : 2 * a + Math.PI * R + (a - x);
-    if (x > a) return 2 * a + (Math.atan2(y, x - a) + Math.PI / 2) * R;
-    let q = Math.atan2(y, x + a); if (q < 0) q += TAU;
-    return 4 * a + Math.PI * R + (q - Math.PI / 2) * R;
+  /* somewhere new to swim to: a spot on screen, well away from here, and away from where the other
+     sharks are and are heading, so they spread across the water instead of bunching up */
+  function pickTarget(a, t, mates) {
+    const h = a.sp[0], span = Math.max(W, H);
+    let best = null, bestScore = -Infinity;
+    for (let k = 0; k < 12; k++) {
+      const x = rand(W * 0.12, W * 0.88), y = rand(H * 0.15, H * 0.85);
+      let score = Math.min(1, Math.hypot(x - h.x, y - h.y) / (span * 0.3));
+      for (const b of mates) score += Math.min(Math.hypot(x - b.tx, y - b.ty), Math.hypot(x - b.sp[0].x, y - b.sp[0].y)) / span;
+      if (score > bestScore) { bestScore = score; best = [x, y]; }
+    }
+    [a.tx, a.ty] = best; a.next = t + rand(8, 16);
   }
 
-  /* sharks circle their track, chasing a point a little ahead on it. Fish schools wander between
-     random points on screen. Everyone gives other sharks room and shies away from the cursor. */
+  /* everyone roams: they swim toward far-off spots, meandering in lazy S-curves on the way, and shy
+     away from the cursor. Near an edge they stop meandering and turn away from it; they may dip
+     off-screen, but after a second outside they swing straight back in. */
   function steer(a, dt, t, turn, others) {
-    const h = a.sp[0];
-    let want;
-    if (a.orbit) {
-      const o = a.orbit, k = track(o.inset * (1 + 0.12 * Math.sin(t * 0.05 + o.ph)));   // the loop slowly breathes
-      const g = trackAt(k, trackS(k, h.x, h.y) + o.dir * (a.L * 0.3 + k.R * 0.25));
-      want = Math.atan2(g.y - h.y, g.x - h.x);
-      turn = Math.max(turn, 1.3 * a.v / k.R);            // always able to make the round ends
-    } else {
-      if (t > a.next || Math.hypot(a.tx - h.x, a.ty - h.y) < a.L * 0.4) {
-        a.tx = rand(W * 0.1, W * 0.9); a.ty = rand(H * 0.12, H * 0.88); a.next = t + rand(6, 12);
+    const h = a.sp[0], minWH = Math.min(W, H), mates = others.filter(b => b !== a && !b.far === !a.far);
+    if (t > a.next || Math.hypot(a.tx - h.x, a.ty - h.y) < a.L * 0.5) pickTarget(a, t, mates);
+    const edge = Math.min(h.x, W - h.x, h.y, H - h.y), m = minWH * 0.18;
+    a.out = edge < 0 ? a.out + dt : Math.max(0, a.out - dt * 2);
+    const lean = Math.max(0, (m - edge) / m);              // 0 well inside, 1 at the edge, more beyond it
+    let vx = a.tx - h.x, vy = a.ty - h.y, l = Math.hypot(vx, vy) || 1;
+    const wob = (0.5 * Math.sin(t * 0.11 + a.w1) + 0.3 * Math.sin(t * 0.29 + a.w2)) * Math.max(0, 1 - lean);
+    const cw = Math.cos(wob), sw = Math.sin(wob);
+    [vx, vy] = [(vx * cw - vy * sw) / l, (vx * sw + vy * cw) / l];
+    /* getting back on screen comes first: while it is out, the others steer around it instead */
+    if (a.out < 0.5) {
+      for (const b of mates) {                             // last-resort nudge if two still get close
+        const ex = h.x - b.sp[0].x, ey = h.y - b.sp[0].y, d = Math.hypot(ex, ey) || 1, R = (a.L + b.L) * 0.38;
+        if (d < R) { const k = (1 - d / R) * 2.5; vx += ex / d * k; vy += ey / d * k; }
       }
-      want = Math.atan2(a.ty - h.y, a.tx - h.x);
+      /* look ahead: if another shark will be close in the next few seconds, start dodging now */
+      const vax = Math.cos(a.a) * a.v, vay = Math.sin(a.a) * a.v;
+      for (const b of mates) {
+        const R = (a.L + b.L) * 0.42, vbx = Math.cos(b.a) * b.v, vby = Math.sin(b.a) * b.v;
+        for (const tau of [0.8, 1.6, 2.4, 3.2]) {
+          const fx = h.x + vax * tau - (b.sp[0].x + vbx * tau), fy = h.y + vay * tau - (b.sp[0].y + vby * tau), d = Math.hypot(fx, fy) || 1;
+          if (d < R) { const k = (1 - d / R) * 3.8 / tau; vx += fx / d * k; vy += fy / d * k; break; }
+        }
+      }
+      if (t < mouse.until) {
+        const ex = h.x - mouse.x, ey = h.y - mouse.y, d = Math.hypot(ex, ey) || 1;
+        if (d < a.L * 0.7 + 90) { vx += ex / d * 3; vy += ey / d * 3; a.boost = Math.min(1, a.boost + dt * 3); }
+      }
     }
-    for (const b of others) {
-      if (b === a || !b.far !== !a.far) continue;
-      const dx = h.x - b.sp[0].x, dy = h.y - b.sp[0].y;
-      if (Math.hypot(dx, dy) < (a.L + b.L) * 0.35) want = Math.atan2(dy, dx);
+    /* push straight away from whichever edges are close, harder once the head is outside */
+    const push = (a.out > 1 ? 3 : 1.5), ix = Math.max(0, (m - h.x) / m) - Math.max(0, (h.x - (W - m)) / m);
+    const iy = Math.max(0, (m - h.y) / m) - Math.max(0, (h.y - (H - m)) / m);
+    vx += ix * push; vy += iy * push;
+    if (a.out > 1 && (a.tx < W * 0.25 || a.tx > W * 0.75 || a.ty < H * 0.25 || a.ty > H * 0.75)) {
+      a.tx = rand(W * 0.3, W * 0.7); a.ty = rand(H * 0.3, H * 0.7); a.next = t + rand(6, 10);
     }
-    if (t < mouse.until) {
-      const dx = h.x - mouse.x, dy = h.y - mouse.y;
-      if (Math.hypot(dx, dy) < a.L * 0.7 + 90) { want = Math.atan2(dy, dx); a.boost = Math.min(1, a.boost + dt * 3); }
-    }
-    /* never swim out of the window: near an edge, head back toward the middle */
-    const m = a.orbit ? a.orbit.inset * 0.55 : a.L;
-    if (h.x < m || h.x > W - m || h.y < m || h.y > H - m) want = Math.atan2(H / 2 - h.y, W / 2 - h.x);
-    a.a = turnBy(a.a, want, turn * (1 + a.boost) * dt);
+    a.a = turnBy(a.a, Math.atan2(vy, vx), turn * (1 + a.boost) * (1 + Math.min(3, lean) * 0.9) * (a.out > 0.5 ? 1.8 : 1) * dt);
     a.boost = Math.max(0, a.boost - dt * 0.5);
     a.v = a.base * (1 + a.boost * 1.6);
     move(a, dt);
@@ -779,19 +778,14 @@ const Home = (() => {
     const cw = Math.max(5, ctx.measureText("M").width), ch = Math.round(fs * 1.1);
     const cols = Math.ceil(W / cw), rows = Math.ceil(H / ch);
     buf.width = cols; buf.height = rows;
-    /* big sharks share the outer loop, evenly spaced and the same speed so they never bunch up
-       (a third joins on very wide screens); a small dim one circles a tighter loop the other way */
-    const onTrack = (kind, L, speed, joints, orbit, s0) => {
-      const k = track(orbit.inset), p = trackAt(k, s0), q = trackAt(k, s0 + orbit.dir);
-      const sh = animal(kind, L, p.x, p.y, Math.atan2(q.y - p.y, q.x - p.x), speed, joints);
-      sh.orbit = orbit; return sh;
-    };
-    const big = W > H * 2 ? 3 : 2, minWH = Math.min(W, H), sharks = [];
-    const ring = { inset: S * 0.52 * 0.24 + minWH * 0.04, dir: 1, ph: rand(0, TAU) };   // one shared loop
+    /* big sharks start spread across the screen (a third joins on very wide screens); a small dim one swims further off */
+    const big = W > H * 2 ? 3 : 2, sharks = [];
+    const spots = [[0.25, 0.3, 0.3], [0.75, 0.72, Math.PI + 0.3], [0.5, 0.22, Math.PI - 0.4]];
     for (let i = 0; i < big; i++) {
-      sharks.push(onTrack(i ? "reef" : "hammerhead", S * (i ? 0.44 : 0.52), S * 0.08, 22, ring, track(ring.inset).len * i / big));
+      const [x, y, hd] = spots[i];
+      sharks.push(animal(i ? "reef" : "hammerhead", S * (i ? 0.4 : 0.48), W * x, H * y, hd, S * 0.08, 22));
     }
-    const far = onTrack("reef", S * 0.24, S * 0.06, 16, { inset: minWH * 0.3, dir: -1, ph: rand(0, TAU) }, rand(0, 1000));
+    const far = animal("reef", S * 0.24, W * 0.62, H * 0.6, -0.5, S * 0.06, 16);
     far.far = true;                                      // smaller and dimmer, further off
     sharks.push(far);
     const schools = [0, 1].map(k => {
@@ -830,7 +824,10 @@ const Home = (() => {
   /* ---- painting into the buffer ---- */
   const SHARK_W = s => s < 0.3 ? Math.pow(Math.sin(s / 0.3 * Math.PI / 2), 0.55) : Math.max(0.06, Math.pow(Math.cos((s - 0.3) / 0.62 * Math.PI / 2), 1.3));
   const FISH_W = s => Math.max(0.05, Math.pow(Math.sin(Math.min(1, s / 0.85) * Math.PI), 0.8));
-  const grey = v => { const c = Math.round(255 * Math.max(0, Math.min(1, v))); return `rgb(${c},${c},${c})`; };
+  /* halo: when true, shapes paint as a dark rim instead, so a shark passing over another stays distinct */
+  let halo = false;
+  const grey = v => { if (halo) return "#000"; const c = Math.round(255 * Math.max(0, Math.min(1, v))); return `rgb(${c},${c},${c})`; };
+  const rim = () => { if (halo) { bx.strokeStyle = "#000"; bx.lineWidth = ocean.cw * 1.7; bx.stroke(); } };
 
   /* the spine with a travelling tail beat added: points, unit normals, forward vectors and half-widths */
   function pose(a, amp, waveK, widthFn, wScale) {
@@ -849,6 +846,7 @@ const Home = (() => {
     pts.forEach((p, i) => { const x = p.x + p.nx * p.w, y = p.y + p.ny * p.w; i ? bx.lineTo(x, y) : bx.moveTo(x, y); });
     for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; bx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w); }
     bx.closePath(); bx.fillStyle = grey(v); bx.fill();
+    if (halo) return rim();
     /* light along the back: a wide soft band, then a narrow bright ridge, so the body looks rounded */
     for (const [k, lv] of [[1.1, core * 0.62], [0.55, core * 0.8], [0.22, core]]) {
       bx.strokeStyle = grey(lv);
@@ -866,7 +864,7 @@ const Home = (() => {
     bx.moveTo(t.x + t.nx * half, t.y + t.ny * half);
     bx.quadraticCurveTo(t.x + dx * len * 0.5 + t.nx * half * 2.2, t.y + dy * len * 0.5 + t.ny * half * 2.2, t.x + dx * len, t.y + dy * len);
     bx.lineTo(t.x - t.nx * half, t.y - t.ny * half); bx.closePath();
-    bx.fillStyle = grey(v); bx.fill();
+    bx.fillStyle = grey(v); bx.fill(); rim();
   }
 
   function drawShark(a, lv) {
@@ -882,27 +880,28 @@ const Home = (() => {
         const tx = e0x + k * a0.nx * out * L - a0.fx * back * L, ty = e0y + k * a0.ny * out * L - a0.fy * back * L;
         bx.beginPath(); bx.moveTo(e0x, e0y);
         bx.quadraticCurveTo(e0x + k * a0.nx * out * L * 0.7, e0y + k * a0.ny * out * L * 0.7, tx, ty);
-        bx.lineTo(e1x, e1y); bx.closePath(); bx.fillStyle = grey(v * lv); bx.fill();
+        bx.lineTo(e1x, e1y); bx.closePath(); bx.fillStyle = grey(v * lv); bx.fill(); rim();
       }
     };
-    fin(0.2, 0.36, 0.15, 0.26, 0.52);
-    fin(0.58, 0.65, 0.05, 0.09, 0.42);
-    tail(pts, a, L * 0.2, L * 0.022, 0.55 * lv);
-    body(pts, 0.36 * lv, 0.9 * lv);
-    const h = pts[0], nk = pts[2];
-    if (hammer) {
-      /* the hammer: a wide bar across the nose, its tips swept back, with an eye at each end */
-      const span = L * 0.15, back = L * 0.035;
-      bx.strokeStyle = grey(0.72 * lv); bx.lineWidth = L * 0.045;
-      bx.beginPath();
-      bx.moveTo(h.x + nk.nx * span - h.fx * back, h.y + nk.ny * span - h.fy * back);
-      bx.quadraticCurveTo(h.x + h.fx * L * 0.02, h.y + h.fy * L * 0.02, h.x - nk.nx * span - h.fx * back, h.y - nk.ny * span - h.fy * back);
-      bx.stroke();
-      for (const k of [1, -1]) ocean.eyes.push([h.x + k * nk.nx * span * 1.02 - h.fx * back, h.y + k * nk.ny * span * 1.02 - h.fy * back, lv]);
-    } else {
-      const e = at(0.07);
-      for (const k of [1, -1]) ocean.eyes.push([e.x + k * e.nx * e.w * 0.95, e.y + k * e.ny * e.w * 0.95, lv]);
-    }
+    const h = pts[0], nk = pts[2], span = L * 0.15, back = L * 0.035;
+    const shape = () => {
+      fin(0.2, 0.36, 0.15, 0.26, 0.52);
+      fin(0.58, 0.65, 0.05, 0.09, 0.42);
+      tail(pts, a, L * 0.2, L * 0.022, 0.55 * lv);
+      body(pts, 0.36 * lv, 0.9 * lv);
+      if (hammer) {
+        /* the hammer: a wide bar across the nose, its tips swept back */
+        bx.strokeStyle = grey(0.72 * lv); bx.lineWidth = L * 0.045 + (halo ? ocean.cw * 1.7 : 0);
+        bx.beginPath();
+        bx.moveTo(h.x + nk.nx * span - h.fx * back, h.y + nk.ny * span - h.fy * back);
+        bx.quadraticCurveTo(h.x + h.fx * L * 0.02, h.y + h.fy * L * 0.02, h.x - nk.nx * span - h.fx * back, h.y - nk.ny * span - h.fy * back);
+        bx.stroke();
+      }
+    };
+    halo = true; shape();                                // first a dark rim over anything underneath
+    halo = false; shape();
+    if (hammer) for (const k of [1, -1]) ocean.eyes.push([h.x + k * nk.nx * span * 1.02 - h.fx * back, h.y + k * nk.ny * span * 1.02 - h.fy * back, lv]);
+    else { const e = at(0.07); for (const k of [1, -1]) ocean.eyes.push([e.x + k * e.nx * e.w * 0.95, e.y + k * e.ny * e.w * 0.95, lv]); }
   }
   function drawFish(a, lv) {
     const pts = pose(a, 0.14, 3.2, FISH_W, 0.2);
@@ -1001,8 +1000,7 @@ const Home = (() => {
   }
   /* the sharks steer by the frame clock (+5 s, after the warm-up swim), so the cursor's "scare" window uses it too */
   home.addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.until = (performance.now() - t0) / 1000 + 5 + 2.5; });
-  home.addEventListener("pointerleave", () => { mouse.until = 0; });
-  /* ---- the name, painted into the canvas so the glass can bend it ---- */
+  home.addEventListener("pointerleave", () => { mouse.until = 0; });  /* ---- the name, painted into the canvas so the glass can bend it ---- */
   function layoutName() {
     const fs = mobileQ.matches ? W * 0.245 : Math.max(84, Math.min(W * 0.215, 420));
     ctx.font = `300 ${fs}px ${SERIF}`;
