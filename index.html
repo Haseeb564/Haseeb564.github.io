@@ -633,14 +633,6 @@ addEventListener("resize", () => { layoutStrip(); if (state.active && state.mode
 const TAU = Math.PI * 2;
 const MONO = '"JetBrains Mono", Consolas, monospace', PIXEL = 'Silkscreen, "JetBrains Mono", monospace', SERIF = '"Cormorant Garamond", Garamond, serif';
 function rr(c, x, y, w, h, r) { c.beginPath(); if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); }
-function daisy(c, x, y, R, n, fill, stroke, lw, rot = 0) {
-  c.save(); c.translate(x, y); c.fillStyle = fill; c.strokeStyle = stroke; c.lineWidth = lw;
-  for (let layer = 0; layer < 2; layer++) for (let k = 0; k < n; k++) {
-    c.save(); c.rotate(rot + (k + layer * 0.5) * TAU / n);
-    c.beginPath(); c.ellipse(R * 0.55, 0, R * 0.45, R * (layer ? 0.1 : 0.125), 0, 0, TAU); c.fill(); c.stroke(); c.restore();
-  }
-  c.restore();
-}
 /* the classic donut.c torus, returned as a grid of shade indexes (0-11, -1 = empty) */
 function donut(A, B, cols, rows) {
   const out = new Int8Array(cols * rows).fill(-1), zb = new Float32Array(cols * rows);
@@ -661,225 +653,249 @@ function donut(A, B, cols, rows) {
 const SHADES = ".,-~:;=!*#$@";
 
 /* =========================================================
-   HOME: drifting code specimens on a night canvas
+   HOME: an ASCII ocean. Sharks and small fish swim around the name. Each animal is a
+   shaded shape painted into a tiny buffer (one pixel per character cell), and each
+   cell's brightness picks a character from a density ramp, so the bodies read as volume.
    ========================================================= */
 const Home = (() => {
   const cv = $("#bg"), ctx = cv.getContext("2d");
-  let W = 0, H = 0, dpr = 1, cards = [], dots = [], raf = 0, running = false;
+  let W = 0, H = 0, dpr = 1, raf = 0, running = false, ocean = null;
   let outline = null, shown = null, oa = 0, C = {}, revealAt = Infinity, lastNow = 0, NL = null;
   const t0 = performance.now();
 
   const colors = () => { C = { night: css("--night"), ash: css("--ash"), bone: css("--bone"), peri: css("--peri"), lime: css("--lime") }; };
-  function offscreen(w, h) {
-    const c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr));
-    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, x];
+
+  const RAMP = ".'`:;+itfS%X8&@#";                      // sparse to dense
+  const buf = document.createElement("canvas"), bx = buf.getContext("2d", { willReadFrequently: true });
+  const mouse = { x: 0, y: 0, until: 0 };
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const turnBy = (a, want, max) => a + Math.max(-max, Math.min(max, Math.atan2(Math.sin(want - a), Math.cos(want - a))));
+
+  /* ---- animals: a head that steers, and a spine of joints that follows it ---- */
+  function animal(kind, L, x, y, heading, speed, joints) {
+    const seg = L / (joints - 1), sp = [];
+    for (let i = 0; i < joints; i++) sp.push({ x: x - Math.cos(heading) * seg * i, y: y - Math.sin(heading) * seg * i });
+    return { kind, L, seg, sp, a: heading, base: speed, v: speed, boost: 0, phase: rand(0, TAU), tx: x, ty: y, next: 0 };
   }
-  function vertical(c, s, x, y, lh) {
-    c.save(); c.textAlign = "center"; c.textBaseline = "middle";
-    [...s].forEach((ch, i) => c.fillText(ch, x, y + (i - (s.length - 1) / 2) * lh)); c.restore();
+  /* each joint stays one segment behind the joint before it, so the body bends through turns */
+  function follow(a) {
+    for (let i = 1; i < a.sp.length; i++) {
+      const p = a.sp[i - 1], q = a.sp[i], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+      q.x = p.x + dx / d * a.seg; q.y = p.y + dy / d * a.seg;
+    }
+  }
+  function move(a, dt) {
+    const h = a.sp[0];
+    h.x += Math.cos(a.a) * a.v * dt; h.y += Math.sin(a.a) * a.v * dt;
+    a.phase += dt * (3 + 9 * a.v / a.L);                 // the tail beats faster when it hurries
+    follow(a);
   }
 
-  /* ---- cards ---- */
-  function drawPixel(c, w, h) {
-    rr(c, 0, 0, w, h, 10); c.fillStyle = C.peri; c.fill();
-    c.save(); rr(c, 0, 0, w, h, 10); c.clip();
-    c.fillStyle = C.night; c.font = `${w * 0.5}px ${PIXEL}`; c.textBaseline = "top";
-    ["4", "0", "4"].forEach((ch, i) => c.fillText(ch, w * 0.07, h * 0.035 + i * w * 0.6));
-    c.fillStyle = C.bone; c.fillRect(w * 0.08, h * 0.5, w * 0.84, w * 0.3);
-    c.fillStyle = C.night; c.font = `${w * 0.17}px ${PIXEL}`; c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText("NULL", w * 0.5, h * 0.5 + w * 0.15);
-    c.textAlign = "left"; c.textBaseline = "alphabetic";
-    c.save(); c.translate(w * 0.68, h * 0.02); c.rotate(Math.PI / 2);
-    c.fillStyle = C.bone; c.font = `${w * 0.075}px ${MONO}`;
-    const s = "segmentation fault (core dumped) at 0x7ffe3a1c   ";
-    c.fillText(s + s + s, 0, 0); c.fillText('Traceback (most recent call last): File "main.py", line 42, in <module>', 0, w * 0.11);
-    c.restore();
-    c.save(); c.translate(w * 0.2, h * 0.6); c.rotate(Math.PI / 2);
-    c.strokeStyle = C.bone; c.lineWidth = 1; c.font = `${w * 0.24}px ${MONO}`; c.strokeText("error", 0, 0); c.restore();
-    c.fillStyle = C.night; const r = rng(7), px = w * 0.06;
-    for (let i = 0; i < 46; i++) c.fillRect(w * 0.08 + Math.floor(r() * 14) * px, h * 0.8 + Math.floor(r() * 8) * px, px, px);
-    c.restore();
+  /* sharks cruise their own lane: across the screen, a turn just off the edge, and back. Fish schools
+     wander between random points. Everyone gives other sharks room and shies away from the cursor. */
+  function steer(a, dt, t, turn, margin, others) {
+    const h = a.sp[0];
+    if (t > a.next || Math.hypot(a.tx - h.x, a.ty - h.y) < a.L * 0.4) {
+      if (a.lane) { a.tx = h.x < W / 2 ? W + margin : -margin; a.ty = H * rand(a.lane[0], a.lane[1]); a.next = t + rand(16, 26); }
+      else { a.tx = rand(-margin, W + margin); a.ty = rand(H * 0.1, H * 0.9); a.next = t + rand(6, 12); }
+    }
+    let want = Math.atan2(a.ty - h.y, a.tx - h.x);
+    for (const b of others) {
+      if (b === a || !b.far !== !a.far) continue;
+      const dx = h.x - b.sp[0].x, dy = h.y - b.sp[0].y;
+      if (Math.hypot(dx, dy) < (a.L + b.L) * 0.35) want = Math.atan2(dy, dx);
+    }
+    if (t < mouse.until) {
+      const dx = h.x - mouse.x, dy = h.y - mouse.y;
+      if (Math.hypot(dx, dy) < a.L * 0.7 + 90) { want = Math.atan2(dy, dx); a.boost = Math.min(1, a.boost + dt * 3); }
+    }
+    a.a = turnBy(a.a, want, turn * (1 + a.boost) * dt);
+    a.boost = Math.max(0, a.boost - dt * 0.5);
+    a.v = a.base * (1 + a.boost * 1.6);
+    move(a, dt);
   }
 
-  function drawPort(c, w, h, t) {
-    const r = w / 2;
-    c.save(); c.beginPath(); c.arc(r, r, r - 1, 0, TAU); c.clip();
-    c.fillStyle = C.night; c.fillRect(0, 0, w, h);
-    c.save(); c.beginPath(); c.rect(0, 0, w, h * 0.56); c.clip();
-    c.strokeStyle = C.bone; c.lineWidth = 1.3; const s = w / 3.4;
-    for (let k = -5; k <= 9; k++) {
-      c.beginPath(); c.moveTo(k * s, 0); c.lineTo(k * s + h, h); c.moveTo(k * s, 0); c.lineTo(k * s - h, h); c.stroke();
-    }
-    c.fillStyle = C.night; c.beginPath(); c.arc(r * 0.6, h * 0.18, w * 0.05, 0, TAU); c.fill();
-    c.fillStyle = C.bone; c.beginPath(); c.arc(r * 0.6, h * 0.18, w * 0.03, 0, TAU); c.fill();
-    c.fillStyle = C.night; c.beginPath(); c.arc(r * 0.6 + w * 0.013, h * 0.18 - w * 0.008, w * 0.027, 0, TAU); c.fill();
-    c.restore();
-    c.strokeStyle = C.bone; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h * 0.56); c.lineTo(w, h * 0.56); c.stroke();
-    const cols = 44, rows = 13, cw = w * 0.86 / cols, ch = cw * 1.9, x0 = w * 0.07, y0 = h * 0.5;
-    const g = donut(t * 0.7, t * 0.35, cols, rows);
-    c.font = `600 ${cw * 1.7}px ${MONO}`; c.textBaseline = "top";
-    for (let i = 0; i < g.length; i++) {
-      const N = g[i]; if (N < 0) continue;
-      c.fillStyle = N >= 8 ? C.bone : C.peri;
-      c.globalAlpha = N >= 4 ? 1 : 0.55;
-      c.fillText(SHADES[N], x0 + (i % cols) * cw, y0 + Math.floor(i / cols) * ch);
-    }
-    c.globalAlpha = 1; c.textBaseline = "alphabetic";
-    c.restore();
-    c.strokeStyle = C.bone; c.lineWidth = 1.6; c.beginPath(); c.arc(r, r, r - 1.5, 0, TAU); c.stroke();
-    c.lineWidth = 0.8; c.beginPath(); c.arc(r, r, r * 0.92, 0, TAU); c.stroke();
+  /* each fish holds a spot in its school, drifting a little, and catches up when it falls behind */
+  function school(s, f, dt, t) {
+    const h = s.sp[0], ca = Math.cos(s.a), sa = Math.sin(s.a), a = f.body, fh = a.sp[0];
+    const gx = h.x + f.ox * ca - f.oy * sa + Math.sin(t * 0.7 + f.ph) * 8;
+    const gy = h.y + f.ox * sa + f.oy * ca + Math.cos(t * 0.9 + f.ph) * 8;
+    const d = Math.hypot(gx - fh.x, gy - fh.y);
+    a.a = turnBy(a.a, Math.atan2(gy - fh.y, gx - fh.x), 4 * dt);
+    a.v = s.v * (0.7 + Math.min(1.4, d / (a.L * 2)));
+    move(a, dt);
   }
 
-  const ovalGeo = (w, h) => { const rx = w * 0.37, ry = h * 0.43, cx = w / 2, cy = h * 0.52; return { cx, cy, rx, ry, top: cy - ry * 0.4 }; };
-  function drawOval(c, w, h) {
-    rr(c, 0, 0, w, h, 10); c.fillStyle = C.peri; c.fill();
-    const { cx, cy, rx, ry, top } = ovalGeo(w, h);
-    c.fillStyle = C.night; c.font = `${w * 0.12}px ${PIXEL}`; c.textBaseline = "top";
-    c.fillText("</", w * 0.04, h * 0.025); c.textAlign = "right"; c.fillText("/>", w * 0.96, h * 0.025);
-    c.textBaseline = "bottom"; c.fillText("{}", w * 0.96, h * 0.985); c.textAlign = "left"; c.fillText("[]", w * 0.04, h * 0.985);
-    c.textBaseline = "alphabetic";
-    c.font = `600 ${w * 0.042}px ${MONO}`;
-    vertical(c, "(undefined)", w * 0.065, cy, w * 0.05); vertical(c, "(NaN)", w * 0.935, cy, w * 0.05);
-    c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.fillStyle = C.night; c.fill();
-    c.save(); c.clip();
-    c.fillStyle = C.bone; c.beginPath(); c.ellipse(cx, cy - ry * 0.84, rx * 0.13, rx * 0.035, 0, 0, TAU); c.fill();
-    /* the stem is a git graph */
-    c.strokeStyle = C.bone; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(cx, top); c.lineTo(cx, cy + ry * 1.1); c.stroke();
-    const bx = cx - rx * 0.4;
-    c.beginPath(); c.moveTo(cx, cy + ry * 0.02);
-    c.bezierCurveTo(cx, cy + ry * 0.14, bx, cy + ry * 0.08, bx, cy + ry * 0.22);
-    c.lineTo(bx, cy + ry * 0.4);
-    c.bezierCurveTo(bx, cy + ry * 0.54, cx, cy + ry * 0.48, cx, cy + ry * 0.62); c.stroke();
-    c.beginPath(); c.moveTo(cx, cy + ry * 0.3);
-    c.quadraticCurveTo(cx + rx * 0.5, cy + ry * 0.02, cx + rx * 0.7, cy + ry * 0.12);
-    c.quadraticCurveTo(cx + rx * 0.45, cy + ry * 0.38, cx, cy + ry * 0.3);
-    c.fillStyle = C.night; c.fill(); c.stroke();
-    c.lineWidth = 1; c.beginPath(); c.moveTo(cx, cy + ry * 0.3); c.quadraticCurveTo(cx + rx * 0.35, cy + ry * 0.18, cx + rx * 0.68, cy + ry * 0.125); c.stroke();
-    const commit = (x, y, fill) => { c.beginPath(); c.arc(x, y, w * 0.017, 0, TAU); c.fillStyle = fill || C.night; c.fill(); c.lineWidth = 2; c.strokeStyle = C.bone; c.stroke(); };
-    [0.15, 0.3, 0.62, 0.86].forEach(k => commit(cx, cy + ry * k));
-    commit(bx, cy + ry * 0.25); commit(bx, cy + ry * 0.38, C.lime);
-    commit(cx, cy + ry * 0.74, C.lime);
-    c.fillStyle = C.bone; c.font = `${w * 0.028}px ${MONO}`;
-    c.fillText("main", cx + w * 0.03, cy + ry * 0.75); c.fillText("HEAD", cx + w * 0.03, cy + ry * 0.75 + w * 0.035);
-    c.textAlign = "right"; c.fillText("fix/bug-417", bx - w * 0.03, cy + ry * 0.33); c.textAlign = "left";
-    daisy(c, cx, top, rx * 0.56, 22, C.bone, C.night, 1.4, 0.1);
-    c.beginPath(); c.arc(cx, top, rx * 0.56 * 0.25, 0, TAU); c.fillStyle = C.bone; c.fill(); c.lineWidth = 1.4; c.strokeStyle = C.night; c.stroke();
-    c.fillStyle = C.bone; c.font = `${w * 0.04}px ${MONO}`;
-    const txt = "TypeError: undefined is not a function", n = txt.length;
-    for (let i = 0; i < n; i++) {
-      const a = Math.PI * 0.84 - (i / (n - 1)) * Math.PI * 0.68;
-      c.save(); c.translate(cx + rx * 0.88 * Math.cos(a), cy + ry * 0.9 * Math.sin(a)); c.rotate(a - Math.PI / 2);
-      c.fillText(txt[i], -w * 0.012, 0); c.restore();
-    }
-    c.restore();
-    c.strokeStyle = C.bone; c.lineWidth = 2; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.stroke();
-    c.lineWidth = 1; c.beginPath(); c.ellipse(cx, cy, rx + w * 0.025, ry + w * 0.025, 0, 0, TAU); c.stroke();
-  }
-  /* the one bug this site keeps on purpose */
-  function drawBug(c, w, h, t) {
-    const { cx, rx, top } = ovalGeo(w, h);
-    const seg = rx * 0.13, x0 = cx - seg * 3.4, y = top + seg * 0.2;
-    c.lineWidth = 1.6; c.strokeStyle = C.night;
-    for (let i = 4; i >= 0; i--) {
-      const x = x0 + i * seg * 1.7, yy = y + Math.sin(t * 2.2 - i * 0.9) * seg * 0.2;
-      c.beginPath(); c.arc(x, yy, seg * (i ? 1 : 1.08), 0, TAU); c.fillStyle = C.lime; c.fill(); c.stroke();
-      if (i) { c.beginPath(); c.arc(x, yy - seg * 0.2, seg * 0.45, Math.PI * 0.15, Math.PI * 0.85); c.stroke(); }
-    }
-    const hy = y + Math.sin(t * 2.2) * seg * 0.2, blink = (t % 4.2) < 0.13 ? 0.08 : 1;
-    c.beginPath(); c.ellipse(x0 - seg * 0.2, hy - seg * 0.1, seg * 0.4, seg * 0.26 * blink, 0, 0, TAU); c.fillStyle = C.bone; c.fill(); c.stroke();
-    c.beginPath(); c.arc(x0 - seg * 0.32, hy - seg * 0.1, seg * 0.13 * blink, 0, TAU); c.fillStyle = C.night; c.fill();
-    c.strokeStyle = C.lime; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(x0 - seg * 0.2, hy - seg * 0.95); c.quadraticCurveTo(x0 - seg * 0.6, hy - seg * 1.9, x0 - seg * 1.15, hy - seg * 1.75); c.stroke();
-    c.beginPath(); c.arc(x0 - seg * 1.15, hy - seg * 1.75, seg * 0.16, 0, TAU); c.fillStyle = C.lime; c.fill();
-  }
-
-  function drawLoop(c, w, h) {
-    rr(c, 1, 1, w - 2, h - 2, 16); c.fillStyle = C.night; c.fill();
-    c.save(); rr(c, 1, 1, w - 2, h - 2, 16); c.clip();
-    daisy(c, w * 0.42, h * 0.98, w * 0.62, 22, C.bone, C.night, 1.5, 0.2);
-    c.beginPath(); c.arc(w * 0.42, h * 0.98, w * 0.62 * 0.24, 0, TAU); c.fillStyle = C.bone; c.fill(); c.stroke();
-    c.font = `600 ${w * 0.07}px ${MONO}`; c.lineJoin = "round";
-    ["while (true) {", "  learn();", "  build();", "  ship();", "}"].forEach((l, i) => {
-      const y = h * 0.14 + i * w * 0.092;
-      c.lineWidth = 5; c.strokeStyle = C.night; c.strokeText(l, w * 0.08, y); c.fillStyle = C.bone; c.fillText(l, w * 0.08, y);
+  function swim(dt, t) {
+    const o = ocean;
+    o.sharks.forEach(a => steer(a, dt, t, a.far ? 0.45 : 0.32, a.L * 0.5, o.sharks));
+    o.schools.forEach(s => { steer(s, dt, t, 1.1, s.L * 4, []); s.fish.forEach(f => school(s, f, dt, t)); });
+    o.snow.forEach(p => {                                // marine snow drifting up through the water
+      p.y -= p.v * dt; p.x += Math.sin(t * 0.3 + p.s * 9) * 4 * dt;
+      if (p.y < -20) { p.y = H + 20; p.x = rand(0, W); }
     });
-    c.beginPath();
-    for (let i = 0; i <= 140; i++) {
-      const a = i / 140 * TAU, d = 1 + Math.sin(a) ** 2;
-      const x = w * 0.62 + w * 0.24 * Math.cos(a) / d, y = h * 0.62 + w * 0.24 * Math.sin(a) * Math.cos(a) / d;
-      i ? c.lineTo(x, y) : c.moveTo(x, y);
-    }
-    c.lineWidth = w * 0.075; c.lineCap = "round"; c.strokeStyle = C.night; c.stroke();
-    c.restore();
-    rr(c, 1, 1, w - 2, h - 2, 16); c.strokeStyle = C.bone; c.lineWidth = 1.5; c.stroke();
   }
 
-  function drawTile(c, w, h, i) {
-    rr(c, 1, 1, w - 2, h - 2, 14); c.fillStyle = C.night; c.fill();
-    c.save(); rr(c, 1, 1, w - 2, h - 2, 14); c.clip();
-    const R = w * 0.36;
-    daisy(c, w / 2, h * 0.56, R, 18, C.bone, C.night, 1.3, i * 0.3);
-    c.beginPath(); c.arc(w / 2, h * 0.56, R * 0.36, 0, TAU); c.fillStyle = C.peri; c.fill(); c.strokeStyle = C.night; c.lineWidth = 1.5; c.stroke();
-    c.fillStyle = C.night; c.font = `600 ${R * 0.3}px ${MONO}`; c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText(["{ }", "</>", "=>"][i % 3], w / 2, h * 0.56 + 1);
-    c.restore();
-    rr(c, 1, 1, w - 2, h - 2, 14); c.strokeStyle = C.bone; c.lineWidth = 1.2; c.stroke();
-  }
-
-  function drawTerm(c, w, h) {
-    rr(c, 0, 0, w, h, 10); c.fillStyle = C.ash; c.fill();
-    c.strokeStyle = C.bone; c.lineWidth = 1; c.globalAlpha = 0.4; c.stroke();
-    c.beginPath(); c.moveTo(0, h * 0.12); c.lineTo(w, h * 0.12); c.stroke(); c.globalAlpha = 1;
-    for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(w * 0.04 + k * w * 0.035, h * 0.06, Math.max(2.5, w * 0.009), 0, TAU); c.stroke(); }
-    const fs = Math.max(8, w * 0.03); c.font = `${fs}px ${MONO}`;
-    const lines = ["~/code-carbon (main) $ git log --oneline", "6779617 Boss health bars with damage trail", "cbbe4ce Crypt: boss foyer and fixed arena",
-      "9940a86 Crypt: branching connected floor", "885d4ef Class pick, passive tree, flasks", "8b1dbfe Add Demon of the Old Empire boss", "~/code-carbon (main) $ ▍"];
-    lines.forEach((l, i) => {
-      c.fillStyle = i === 0 || i === lines.length - 1 ? C.lime : C.bone; c.globalAlpha = i === 0 ? 1 : 0.75;
-      c.fillText(l, w * 0.04, h * 0.24 + i * fs * 1.75);
-    });
-    c.globalAlpha = 1;
-  }
-
-  /* ---- layout ---- */
-  function layout() {
-    const wide = W >= H * 1.05, s = Math.min(W * 0.15, H * 0.26);
-    const list = wide ? [
-      { x: .37 * W, y: .47 * H, w: .3 * W, h: .34 * H, rot: -.015, depth: .2, draw: drawTerm },
-      { x: .17 * W, y: .64 * H, w: .29 * W, h: .52 * H, rot: .02, depth: .55, draw: drawLoop, ghost: true },
-      { x: .012 * W, y: -.04 * H, w: Math.max(120, .14 * W), h: 1.06 * H, rot: -.01, depth: .8, draw: drawPixel, ghost: true },
-      { x: .335 * W - .27 * H, y: -.01 * H, w: .54 * H, h: .54 * H, rot: 0, depth: .45, draw: drawPort, live: true, ghost: true },
-      { x: .55 * W, y: -.38 * s, w: s, h: s, rot: .03, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 0) },
-      { x: .55 * W + s * 1.07, y: -.3 * s, w: s, h: s, rot: -.02, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 1) },
-      { x: .55 * W + s * 2.14, y: -.42 * s, w: s, h: s, rot: .015, depth: .35, draw: (c, w, h) => drawTile(c, w, h, 2) },
-      { x: .535 * W, y: .19 * H, w: .42 * W, h: .92 * H, rot: -.006, depth: .7, draw: drawOval, bug: true, ghost: true },
-    ] : [
-      { x: .04 * W, y: .34 * H, w: .82 * W, h: .2 * H, rot: -.02, depth: .2, draw: drawTerm },
-      { x: -.1 * W, y: .64 * H, w: .62 * W, h: .3 * H, rot: .03, depth: .55, draw: drawLoop, ghost: true },
-      { x: -.03 * W, y: -.03 * H, w: .3 * W, h: .62 * H, rot: -.02, depth: .8, draw: drawPixel, ghost: true },
-      { x: .34 * W, y: .02 * H, w: .7 * W, h: .7 * W, rot: 0, depth: .45, draw: drawPort, live: true, ghost: true },
-      { x: .44 * W, y: .45 * H, w: .7 * W, h: .62 * H, rot: -.01, depth: .7, draw: drawOval, bug: true, ghost: true },
+  function buildOcean() {
+    const mob = mobileQ.matches, S = mob ? Math.min(W * 1.15, H) : Math.min(W * 0.8, H * 1.15), fs = mob ? 10 : 12;
+    ctx.font = `${fs}px ${MONO}`;
+    const cw = Math.max(5, ctx.measureText("M").width), ch = Math.round(fs * 1.1);
+    const cols = Math.ceil(W / cw), rows = Math.ceil(H / ch);
+    buf.width = cols; buf.height = rows;
+    const sharks = [
+      animal("hammerhead", S * 0.62, W * 0.22, H * 0.3, 0.25, S * 0.075, 22),
+      animal("reef", S * 0.5, W * 0.82, H * 0.74, Math.PI + 0.3, S * 0.085, 22),
+      animal("reef", S * 0.26, W * 0.64, H * 0.16, Math.PI - 0.2, S * 0.06, 16),
     ];
-    dots = wide ? [[.69, .9, 7], [.715, .64, 6], [.3, .58, 4]] : [[.4, .6, 6], [.9, .4, 5]];
-    return list;
-  }
-  function build() {
-    cards = layout().map((k, i) => {
-      k.ph = i * 1.7; [k.cv, k.cx] = offscreen(k.w, k.h);
-      if (!k.live) k.draw(k.cx, k.w, k.h);
-      return k;
+    sharks[2].far = true;                                // smaller and dimmer, further off
+    sharks[0].lane = [0.1, 0.34]; sharks[1].lane = [0.64, 0.9]; sharks[2].lane = [0.3, 0.7];
+    const schools = [0, 1].map(k => {
+      const s = animal("lead", S * 0.04, W * (k ? 0.12 : 0.9), H * (k ? 0.84 : 0.42), k ? -0.4 : Math.PI, S * 0.13, 2);
+      s.fish = Array.from({ length: mob ? 6 : 9 }, () => {
+        const f = { ox: rand(-1, 1) * S * 0.1, oy: rand(-1, 1) * S * 0.07, ph: rand(0, TAU) };
+        f.body = animal("fish", S * rand(0.05, 0.065), s.sp[0].x + f.ox, s.sp[0].y + f.oy, s.a, s.base, 6);
+        return f;
+      });
+      return s;
     });
+    const snow = Array.from({ length: Math.round(cols * rows / 130) }, () => ({ x: rand(0, W), y: rand(0, H), v: rand(4, 14), s: rand(0, 1) }));
+    /* a faint dot grid behind everything, drawn once */
+    const grid = document.createElement("canvas");
+    grid.width = Math.round(W * dpr); grid.height = Math.round(H * dpr);
+    const gx = grid.getContext("2d");
+    gx.setTransform(dpr, 0, 0, dpr, 0, 0); gx.font = `${fs}px ${MONO}`; gx.textBaseline = "top";
+    gx.fillStyle = C.bone; gx.globalAlpha = 0.09;
+    for (let r = 1; r < rows; r += 3) for (let c = 2; c < cols; c += 4) gx.fillText("·", c * cw, r * ch);
+    /* the water thins out behind the page's text, so the sharks never fight the words */
+    const calm = new Float32Array(cols * rows).fill(1), pad = 18;
+    home.querySelectorAll(".home-id, .home-blurb, .home-nav, .fine").forEach(el => {
+      const b = el.getBoundingClientRect();
+      if (!b.width) return;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const x = (c + 0.5) * cw, y = (r + 0.5) * ch;
+        const dx = Math.max(b.left - x, 0, x - b.right), dy = Math.max(b.top - y, 0, y - b.bottom);
+        const d = Math.hypot(dx, dy), i = r * cols + c;
+        calm[i] = Math.min(calm[i], 0.18 + 0.82 * Math.min(1, d / (pad * 3)));
+      }
+    });
+    ocean = { cw, ch, cols, rows, fs, sharks, schools, snow, grid, calm, eyes: [] };
+    for (let i = 0; i < 300; i++) swim(1 / 60, i / 60);   // a few seconds of swimming, so the first frame looks natural
   }
 
-  function place(k, t, mult, ghost) {
-    const ox = Math.sin(t * 0.23 + k.ph) * 10 * mult + (ghost ? 18 : 0);
-    const oy = Math.cos(t * 0.19 + k.ph * 1.3) * 12 * mult + (ghost ? 10 : 0);
-    ctx.save(); ctx.translate(k.x + k.w / 2 + ox, k.y + k.h / 2 + oy); ctx.rotate(k.rot + Math.sin(t * 0.17 + k.ph) * 0.012 * mult);
-    ctx.drawImage(k.cv, -k.w / 2, -k.h / 2, k.w, k.h);
-    if (k.bug && !ghost) { ctx.translate(-k.w / 2, -k.h / 2); drawBug(ctx, k.w, k.h, t); }
-    ctx.restore();
+  /* ---- painting into the buffer ---- */
+  const SHARK_W = s => s < 0.3 ? Math.pow(Math.sin(s / 0.3 * Math.PI / 2), 0.55) : Math.max(0.06, Math.pow(Math.cos((s - 0.3) / 0.62 * Math.PI / 2), 1.3));
+  const FISH_W = s => Math.max(0.05, Math.pow(Math.sin(Math.min(1, s / 0.85) * Math.PI), 0.8));
+  const grey = v => { const c = Math.round(255 * Math.max(0, Math.min(1, v))); return `rgb(${c},${c},${c})`; };
+
+  /* the spine with a travelling tail beat added: points, unit normals, forward vectors and half-widths */
+  function pose(a, amp, waveK, widthFn, wScale) {
+    const n = a.sp.length, pts = [];
+    for (let i = 0; i < n; i++) {
+      const p = a.sp[i], q = a.sp[Math.max(0, i - 1)], r = a.sp[Math.min(n - 1, i + 1)];
+      let fx = q.x - r.x, fy = q.y - r.y; const fl = Math.hypot(fx, fy) || 1; fx /= fl; fy /= fl;
+      const nx = -fy, ny = fx, s = i / (n - 1);
+      const off = amp * a.L * Math.sin(a.phase - s * waveK) * Math.pow(s, 1.6);
+      pts.push({ x: p.x + nx * off, y: p.y + ny * off, nx, ny, fx, fy, s, w: widthFn(s) * wScale * a.L });
+    }
+    return pts;
+  }
+  function body(pts, v, core) {
+    bx.beginPath();
+    pts.forEach((p, i) => { const x = p.x + p.nx * p.w, y = p.y + p.ny * p.w; i ? bx.lineTo(x, y) : bx.moveTo(x, y); });
+    for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; bx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w); }
+    bx.closePath(); bx.fillStyle = grey(v); bx.fill();
+    /* light along the back: a wide soft band, then a narrow bright ridge, so the body looks rounded */
+    for (const [k, lv] of [[1.1, core * 0.62], [0.55, core * 0.8], [0.22, core]]) {
+      bx.strokeStyle = grey(lv);
+      for (let i = 1; i < pts.length; i++) {
+        const p = pts[i - 1], q = pts[i];
+        bx.lineWidth = Math.max(0.5, (p.w + q.w) * k); bx.beginPath(); bx.moveTo(p.x, p.y); bx.lineTo(q.x, q.y); bx.stroke();
+      }
+    }
+  }
+  function tail(pts, a, len, half, v) {
+    const n = pts.length, t = pts[n - 1], sw = Math.sin(a.phase - 4.6) * 0.45;
+    const bx0 = -t.fx, by0 = -t.fy, c = Math.cos(sw), s = Math.sin(sw);
+    const dx = bx0 * c - by0 * s, dy = bx0 * s + by0 * c;    // backwards, swung by the beat
+    bx.beginPath();
+    bx.moveTo(t.x + t.nx * half, t.y + t.ny * half);
+    bx.quadraticCurveTo(t.x + dx * len * 0.5 + t.nx * half * 2.2, t.y + dy * len * 0.5 + t.ny * half * 2.2, t.x + dx * len, t.y + dy * len);
+    bx.lineTo(t.x - t.nx * half, t.y - t.ny * half); bx.closePath();
+    bx.fillStyle = grey(v); bx.fill();
+  }
+
+  function drawShark(a, lv) {
+    const hammer = a.kind === "hammerhead", L = a.L;
+    const pts = pose(a, 0.07, 4.2, SHARK_W, hammer ? 0.075 : 0.085);
+    const at = s => pts[Math.min(pts.length - 1, Math.round(s * (pts.length - 1)))];
+    /* fins: pectorals swept back from the shoulders, small pelvics further down */
+    const fin = (s0, s1, out, back, v) => {
+      const a0 = at(s0), a1 = at(s1);
+      for (const k of [1, -1]) {
+        const e0x = a0.x + k * a0.nx * a0.w * 0.8, e0y = a0.y + k * a0.ny * a0.w * 0.8;
+        const e1x = a1.x + k * a1.nx * a1.w * 0.8, e1y = a1.y + k * a1.ny * a1.w * 0.8;
+        const tx = e0x + k * a0.nx * out * L - a0.fx * back * L, ty = e0y + k * a0.ny * out * L - a0.fy * back * L;
+        bx.beginPath(); bx.moveTo(e0x, e0y);
+        bx.quadraticCurveTo(e0x + k * a0.nx * out * L * 0.7, e0y + k * a0.ny * out * L * 0.7, tx, ty);
+        bx.lineTo(e1x, e1y); bx.closePath(); bx.fillStyle = grey(v * lv); bx.fill();
+      }
+    };
+    fin(0.2, 0.36, 0.15, 0.26, 0.52);
+    fin(0.58, 0.65, 0.05, 0.09, 0.42);
+    tail(pts, a, L * 0.2, L * 0.022, 0.55 * lv);
+    body(pts, 0.36 * lv, 0.9 * lv);
+    const h = pts[0], nk = pts[2];
+    if (hammer) {
+      /* the hammer: a wide bar across the nose, its tips swept back, with an eye at each end */
+      const span = L * 0.15, back = L * 0.035;
+      bx.strokeStyle = grey(0.72 * lv); bx.lineWidth = L * 0.045;
+      bx.beginPath();
+      bx.moveTo(h.x + nk.nx * span - h.fx * back, h.y + nk.ny * span - h.fy * back);
+      bx.quadraticCurveTo(h.x + h.fx * L * 0.02, h.y + h.fy * L * 0.02, h.x - nk.nx * span - h.fx * back, h.y - nk.ny * span - h.fy * back);
+      bx.stroke();
+      for (const k of [1, -1]) ocean.eyes.push([h.x + k * nk.nx * span * 1.02 - h.fx * back, h.y + k * nk.ny * span * 1.02 - h.fy * back, lv]);
+    } else {
+      const e = at(0.07);
+      for (const k of [1, -1]) ocean.eyes.push([e.x + k * e.nx * e.w * 0.95, e.y + k * e.ny * e.w * 0.95, lv]);
+    }
+  }
+  function drawFish(a, lv) {
+    const pts = pose(a, 0.14, 3.2, FISH_W, 0.2);
+    tail(pts, a, a.L * 0.35, a.L * 0.03, 0.5 * lv);
+    body(pts, 0.42 * lv, 0.65 * lv);
+  }
+
+  function paintOcean(t) {
+    const o = ocean;
+    bx.setTransform(1, 0, 0, 1, 0, 0); bx.fillStyle = "#000"; bx.fillRect(0, 0, o.cols, o.rows);
+    bx.setTransform(1 / o.cw, 0, 0, 1 / o.ch, 0, 0); bx.lineCap = "round"; bx.lineJoin = "round";
+    o.eyes = [];
+    o.sharks.forEach(a => { if (a.far) drawShark(a, 0.5); });
+    o.schools.forEach(s => s.fish.forEach(f => drawFish(f.body, 0.85)));
+    o.sharks.forEach(a => { if (!a.far) drawShark(a, 1); });
+    const px = bx.getImageData(0, 0, o.cols, o.rows).data;
+
+    ctx.drawImage(o.grid, 0, 0, W, H);
+    ctx.font = `${o.fs}px ${MONO}`; ctx.textBaseline = "top"; ctx.fillStyle = C.bone;
+    ctx.globalAlpha = 0.28;
+    for (const p of o.snow) ctx.fillText(p.s > 0.7 ? "·" : ".", p.x, p.y);
+    /* batch cells by brightness so each batch needs only one alpha change */
+    const lots = [[], [], [], []], last = RAMP.length - 1;
+    for (let r = 0, i = 0; r < o.rows; r++) for (let c = 0; c < o.cols; c++, i += 4) {
+      const v = px[i] / 255 * o.calm[i >> 2];
+      if (v < 0.05) continue;
+      lots[v < 0.3 ? 0 : v < 0.55 ? 1 : v < 0.8 ? 2 : 3].push(c, r, Math.min(last, Math.floor(Math.pow(v, 1.3) * RAMP.length)));
+    }
+    [0.24, 0.42, 0.62, 0.84].forEach((al, k) => {
+      ctx.globalAlpha = al; const b = lots[k];
+      for (let i = 0; i < b.length; i += 3) ctx.fillText(RAMP[b[i + 2]], b[i] * o.cw, b[i + 1] * o.ch);
+    });
+    ctx.fillStyle = C.lime;
+    for (const [x, y, lv] of o.eyes) {
+      ctx.globalAlpha = lv;
+      ctx.fillText("o", Math.floor(x / o.cw) * o.cw, Math.floor(y / o.ch) * o.ch);
+    }
+    ctx.globalAlpha = 1;
   }
 
   function drawOutline(t) {
@@ -921,28 +937,26 @@ const Home = (() => {
   }
 
   function frame(now) {
-    if (W < 2 || H < 2 || !cards.length) { if (running && !reduce) raf = requestAnimationFrame(frame); return; }
+    if (W < 2 || H < 2 || !ocean) { if (running && !reduce) raf = requestAnimationFrame(frame); return; }
     const t = (now - t0) / 1000, dt = Math.min(0.05, Math.max(0, (now - (lastNow || now)) / 1000));
     lastNow = now;
     oa = reduce ? (outline ? 1 : 0) : oa + ((outline ? 1 : 0) - oa) * 0.08;
+    if (!reduce) swim(dt, t + 5);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
-    for (const k of cards) if (k.live) { k.cx.clearRect(0, 0, k.w, k.h); k.draw(k.cx, k.w, k.h, t); }
-    for (const k of cards) place(k, t, 1, false);
-    ctx.fillStyle = C.lime;
-    dots.forEach(([x, y, r], i) => { ctx.beginPath(); ctx.arc(x * W + Math.sin(t * 0.5 + i) * 9, y * H + Math.cos(t * 0.4 + i) * 9, r, 0, TAU); ctx.fill(); });
-    ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.14;
-    for (const k of cards) if (k.ghost) place(k, t, -1.8, true);
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 0.3 + oa * 0.42; ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
-    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.78);
+    paintOcean(t);
+    ctx.globalAlpha = 0.08 + oa * 0.5; ctx.fillStyle = C.night; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.8);
     g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, C.night);
-    ctx.globalAlpha = 0.7; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.6; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
     drawName(now);
     if (oa > 0.01) drawOutline(t);
     glassFrame(now, dt);
     if (running && !reduce) raf = requestAnimationFrame(frame);
   }
+  /* the sharks steer by the frame clock (+5 s, after the warm-up swim), so the cursor's "scare" window uses it too */
+  home.addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.until = (performance.now() - t0) / 1000 + 5 + 2.5; });
+  home.addEventListener("pointerleave", () => { mouse.until = 0; });
 
   /* ---- the name, painted into the canvas so the glass can bend it ---- */
   function layoutName() {
@@ -975,9 +989,9 @@ const Home = (() => {
 
   function resize() {
     W = home.clientWidth || innerWidth; H = home.clientHeight || innerHeight; dpr = Math.min(2, devicePixelRatio || 1);
-    if (W < 2 || H < 2) { cards = []; return; }
+    if (W < 2 || H < 2) { ocean = null; return; }
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    colors(); build(); layoutName(); glassResize();
+    colors(); buildOcean(); layoutName(); glassResize();
     if (reduce) frame(performance.now());
   }
 
