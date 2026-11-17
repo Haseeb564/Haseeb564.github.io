@@ -275,6 +275,18 @@ const PROJECTS = [
       "Runs a breadth-first search over the corridor graph and puts the boss room as far from the entrance as it can, preferring dead ends.",
     ],
     stack: ["GDScript", "Godot 4.5", "Custom Resources", "Tween API"] },
+  { title: "GPU Path Tracer", kind: "Graphics", date: "Completed", cover: "cornell",
+    summary: "A physically based path tracer written from scratch in C++ and CUDA, with no game engine or rendering library. It renders triangle meshes with diffuse, metal and glass materials on an RTX GPU, and benchmarks how acceleration structures and sampling strategies trade speed against image quality.",
+    notesTitle: "What it builds and measures",
+    notes: [
+      "A CPU reference renderer in C++ (OBJ meshes, diffuse, metallic and dielectric materials, a physically based camera) that every GPU result is checked against.",
+      "Bounding volume hierarchies built with the Surface Area Heuristic, compared with midpoint and equal-count splits.",
+      "A CUDA port tuned for memory layout and thread divergence and profiled in NVIDIA Nsight, plus a parallel LBVH builder using Morton codes to weigh build time against traversal speed.",
+      "Importance sampling, next-event estimation and multiple importance sampling, compared with naive sampling.",
+      "The hand-written BVH traversal benchmarked against hardware ray tracing with OptiX on RTX cores.",
+      "Tested on the Cornell Box, Sponza, Stanford Bunny and Dragon by rays per second, frame time, BVH build time, memory and image error (MSE and FLIP) against a high-sample reference.",
+    ],
+    stack: ["C++17", "CUDA", "OptiX", "NVIDIA Nsight"] },
   { title: "Online Library Store", kind: "Backend", date: "Completed", cover: "schema",
     summary: "A database-driven store with structured SQL: stored procedures, triggers and views, plus a Java client over JDBC. Built to be easy to maintain and easy to audit.",
     stack: ["Java", "MySQL", "SQL", "JDBC"], source: "https://github.com/Haseeb564" },
@@ -1376,6 +1388,73 @@ const Covers = (() => {
         t.f.forEach((f, i) => c.fillText(f, t.x + 8, t.y + 24 + rh * i + 13));
       });
       c.fillStyle = BK; fit(c, p.title, W - 48, 40, `300 {}px ${SERIF}`); c.fillText(p.title, 24, H - 22);
+    },
+    /* a Cornell box: dithered walls lit from a ceiling light (left wall darker, right lighter, as the red
+       and green walls would read in grey), two shaded spheres, and a few light paths bouncing to the camera */
+    cornell(c, W, H, r, p, BK, WH) {
+      c.fillStyle = BK; c.fillRect(0, 0, W, H);
+      const top = 14, bot = H - 74, L = 30, R = W - 30, cx = (L + R) / 2, cy = (top + bot) / 2, k = 0.36;
+      const b = { l: cx - (cx - L) * k, r: cx + (R - cx) * k, t: cy - (cy - top) * k, b: cy + (bot - cy) * k };
+      const quads = [
+        [[[L, bot], [R, bot], [b.r, b.b], [b.l, b.b]], 0.62],           // floor
+        [[[L, top], [R, top], [b.r, b.t], [b.l, b.t]], 0.3],            // ceiling
+        [[[L, top], [b.l, b.t], [b.l, b.b], [L, bot]], 0.34],           // left wall
+        [[[R, top], [b.r, b.t], [b.r, b.b], [R, bot]], 0.72],           // right wall
+        [[[b.l, b.t], [b.r, b.t], [b.r, b.b], [b.l, b.b]], 0.52],       // back wall
+      ];
+      const inside = (q, x, y) => {
+        let s = 0;
+        for (let i = 0; i < 4; i++) {
+          const [x1, y1] = q[i], [x2, y2] = q[(i + 1) % 4], cr = (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1);
+          if (cr) { if (!s) s = Math.sign(cr); else if (Math.sign(cr) !== s) return false; }
+        }
+        return true;
+      };
+      const lx = cx, ly = top + (b.t - top) * 0.5, lw = (R - L) * 0.12, maxD = Math.hypot(W, H) * 0.7;
+      const floorY = f => b.b + (bot - b.b) * f;
+      const spheres = [{ x: cx - (R - L) * 0.12, r: 36, y: floorY(0.42) - 36 }, { x: cx + (R - L) * 0.15, r: 27, y: floorY(0.72) - 27 }];
+      const B = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], px = 3;
+      c.fillStyle = WH;
+      for (let gy = 0; gy * px < bot; gy++) for (let gx = 0; gx * px < W; gx++) {
+        const x = gx * px + 1, y = gy * px + 1;
+        let v = -1;
+        for (const s of spheres) {
+          const dx = (x - s.x) / s.r, dy = (y - s.y) / s.r, d2 = dx * dx + dy * dy;
+          if (d2 < 1) {
+            const lit = -dy * 0.7 + Math.sqrt(1 - d2) * 0.6 - dx * 0.2;          // light from above and a little left
+            v = 0.3 + 0.7 * (0.5 + 0.5 * lit);
+            if ((dx + 0.32) ** 2 + (dy + 0.42) ** 2 < 0.035) v = 1.2;           // specular highlight
+            break;
+          }
+        }
+        if (v < 0) for (const [q, base] of quads) if (inside(q, x, y)) {
+          v = base * (1 - 0.55 * Math.min(1, Math.hypot(x - lx, y - ly) / maxD));
+          for (const s of spheres) {                                           // soft contact shadow on the floor
+            const sx = (x - s.x) / (s.r * 1.15), sy = (y - (s.y + s.r)) / (s.r * 0.32), sd = sx * sx + sy * sy;
+            if (sd < 1) v *= 0.35 + 0.65 * sd;
+          }
+          break;
+        }
+        if (v > 0 && v * 16 > B[gy % 4][gx % 4] + 0.5) c.fillRect(gx * px, gy * px, px - 1, px - 1);
+      }
+      c.fillRect(lx - lw / 2, top + 1, lw, 5);                         // the light
+      c.strokeStyle = WH; c.lineWidth = 1; c.globalAlpha = 0.35;
+      c.beginPath();
+      [[L, top, b.l, b.t], [R, top, b.r, b.t], [L, bot, b.l, b.b], [R, bot, b.r, b.b]].forEach(([x1, y1, x2, y2]) => { c.moveTo(x1, y1); c.lineTo(x2, y2); });
+      c.rect(b.l, b.t, b.r - b.l, b.b - b.t); c.stroke();
+      c.globalAlpha = 0.6;
+      for (const s of spheres) { c.beginPath(); c.arc(s.x, s.y, s.r, 0, TAU); c.stroke(); }
+      for (let i = 0; i < 6; i++) {                                     // light paths: lamp, floor, wall, camera
+        const side = r() < 0.5, wy = b.t + (b.b - b.t) * (0.15 + r() * 0.7);
+        const pts = [[lx + (r() - 0.5) * lw, top + 6], [L + (R - L) * (0.2 + r() * 0.6), floorY(0.15 + r() * 0.75)],
+          [side ? b.r + (R - b.r) * r() * 0.45 : b.l - (b.l - L) * r() * 0.45, wy], [cx + (r() - 0.5) * 80, bot + 40]];
+        c.globalAlpha = 0.55; c.beginPath(); pts.forEach(([x, y], j) => j ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke();
+        c.globalAlpha = 0.95; pts.slice(1, 3).forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 2.2, 0, TAU); c.fill(); });
+      }
+      c.globalAlpha = 1; c.fillStyle = BK; c.fillRect(0, bot + 4, W, H - bot);
+      c.fillStyle = WH; fit(c, p.title, W * 0.6, 40, `300 {}px ${SERIF}`); c.fillText(p.title, 28, H - 24);
+      c.font = `12px ${MONO}`; c.globalAlpha = 0.7; c.textAlign = "right"; c.fillText("c++17 · cuda · optix", W - 28, H - 30);
+      c.globalAlpha = 1; c.textAlign = "left";
     },
     homelab(c, W, H, r, p, BK, WH) {
       c.fillStyle = BK; c.fillRect(0, 0, W, H);
