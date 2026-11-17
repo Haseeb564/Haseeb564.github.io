@@ -126,8 +126,31 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .disc{position:absolute;left:50%;bottom:0;padding:0;transform-origin:50% 100%;will-change:transform,opacity;background:var(--rule);box-shadow:0 16px 26px -14px var(--shade)}
 .disc img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
 .disc:focus-visible{outline:2px solid var(--hi);outline-offset:5px}
+/* Music / Games switch, centred under the letter bar */
+.shelf-below > .filters{position:static;display:flex;justify-content:center;gap:4px;margin-top:-8px;padding:0}
+.shelf-below > .filters button{padding:5px 12px;border:1px solid var(--rule);border-radius:999px;color:var(--mute)}
+.shelf-below > .filters button:hover{color:var(--ink)}
+.shelf-below > .filters button[aria-pressed="true"]{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+
+/* Lab: the live path tracer */
+.demo{display:grid;gap:10px;width:min(100%,max(220px,min(400px,60vh - 200px)))}
+.demo-view{position:relative}
+.demo canvas{display:block;width:100%;height:auto;aspect-ratio:1;background:#000}
+.demo-tag{display:none;position:absolute;top:8px;padding:2px 6px;font-family:var(--f-mono);font-size:10px;color:#f3f1ea;background:rgba(0,0,0,.5);pointer-events:none}
+.demo.is-split .demo-tag{display:block}
+.demo-tag.l{left:8px}
+.demo-tag.r{right:8px}
+.demo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:12px;font-weight:700}
+.demo-seg{display:flex;gap:4px}
+.demo-seg button{padding:5px 12px;border:1px solid var(--rule);border-radius:999px;color:var(--mute)}
+.demo-seg button:hover{color:var(--ink)}
+.demo-seg button[aria-pressed="true"]{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+.demo-spp{font-family:var(--f-mono);font-weight:400;color:var(--mute);font-variant-numeric:tabular-nums}
+.demo-restart{border-bottom:1px solid currentColor}
+.demo-restart:hover{color:var(--hi)}
+.demo-note{margin:0;font-size:13px;line-height:1.5;color:var(--mute);max-width:52ch}
+
 /* game cases: a real box built from one wrap image (back 0–47.4% | spine 47.4–52.45% | front 52.45–100%) */
-.work.is-shelf .filters{right:auto;left:calc(33.5% + var(--g));display:flex;gap:18px}
 .case{position:absolute;left:50%;bottom:0;transform-style:preserve-3d;will-change:transform;cursor:pointer}
 .case:focus-visible{outline:none}
 .case:focus-visible .front{outline:2px solid var(--hi);outline-offset:5px}
@@ -189,6 +212,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .col-c{order:3;padding:20px 16px 0;display:grid;gap:14px}
   .r-head{transform:none}
   .r-body{overflow:visible}
+  .demo{width:100%;max-width:520px}
   .work.is-info .col-r{order:4}
   .work.is-shelf .col-c,.work.is-shelf .col-r{display:none}
   .shelf{position:relative;left:auto;right:auto;top:auto;bottom:auto;order:2;padding-top:14px}
@@ -303,6 +327,9 @@ const PROJECTS = [
     stack: ["Linux", "Self-hosting", "Networking"] },
 ];
 const LAB = [
+  { title: "Cornell Box, Live", kind: "Graphics", date: "Runs in your browser", cover: "cornell", demo: "pathtracer",
+    summary: "A small WebGL2 version of my GPU path tracer, rendering its Cornell Box test scene on your graphics card right now. Naive paths only count light they happen to hit. Next-event estimation (NEE) also aims a shadow ray at the lamp from every bounce. Split shows both at once: they settle on the same picture, but NEE gets there with far less noise.",
+    stack: ["WebGL2", "GLSL"] },
   { title: "Dev Tools Pack", kind: "Tools", date: "Ongoing", cover: "code",
     summary: "Small utilities that save time: backup helpers, environment bootstrapping, log parsers and one-command setup scripts.",
     stack: ["Bash", "Python", "Linux"], source: "https://github.com/Haseeb564" },
@@ -470,6 +497,7 @@ function route() {
   const isHome = page === "home";
   home.hidden = !isHome; work.hidden = isHome;
   document.body.classList.toggle("is-work", !isHome);
+  Tracer.unmount();
   if (isHome) { Draft.stop(); Home.start(); return; }
   Home.stop();
   document.querySelectorAll(".wnav a").forEach(a => {
@@ -489,6 +517,8 @@ function renderWork(page) {
   const shelfMode = page === "off-hours";
   work.classList.toggle("is-shelf", shelfMode);
   if (!shelfMode) Shelf.hide();
+  /* on the Off-hours shelf the Music / Games switch sits under the letter bar; elsewhere it's back in the corner */
+  if (shelfMode) $(".shelf-below").append(filters); else if (filters.parentNode !== work) work.insertBefore(filters, reading);
   if (page === "info") { filters.hidden = true; renderInfo(); return; }
   state.list = page === "lab" ? LAB : shelfMode ? OFFHOURS : PROJECTS;
   state.filter = "All"; state.active = null;
@@ -597,10 +627,13 @@ function setActive(el, silent) {
   rHead.innerHTML = `<span class="r-kicker">${pad(n)} / ${pad(state.list.length)}</span><h2 class="r-title">${esc(p.artist || p.title)}</h2>`;
   rBody.innerHTML = `
     ${p.artist ? `<p class="r-sub">${esc(p.title)}</p>` : `<p class="r-meta"><span>${esc(p.date)}</span><span>–</span><span>${esc(p.kind)}</span></p>`}
+    ${p.demo ? `<div class="demo-slot"></div>` : ""}
     ${p.summary ? `<p class="r-desc">${esc(p.summary)}</p>` : ""}
     ${p.notes ? `<div class="r-notes"><p class="label">${esc(p.notesTitle || "Notes")}</p><ol>${p.notes.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
     ${p.stack ? `<ul class="r-stack">${p.stack.map(s => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
     <div class="r-links">${p.live ? `<a href="${esc(p.live)}" target="_blank" rel="noopener">Live ↗</a>` : ""}${p.source ? `<a href="${esc(p.source)}" target="_blank" rel="noopener">Source ↗</a>` : ""}</div>`;
+  const slot = rBody.querySelector(".demo-slot");
+  if (slot) Tracer.mount(slot); else Tracer.unmount();
   Draft.reseed(hash(p.title));
   if (!silent) swapIn();
 }
@@ -1453,7 +1486,7 @@ const Covers = (() => {
       }
       c.globalAlpha = 1; c.fillStyle = BK; c.fillRect(0, bot + 4, W, H - bot);
       c.fillStyle = WH; fit(c, p.title, W * 0.6, 40, `300 {}px ${SERIF}`); c.fillText(p.title, 28, H - 24);
-      c.font = `12px ${MONO}`; c.globalAlpha = 0.7; c.textAlign = "right"; c.fillText("c++17 · cuda · optix", W - 28, H - 30);
+      c.font = `12px ${MONO}`; c.globalAlpha = 0.7; c.textAlign = "right"; c.fillText((p.stack || []).slice(0, 3).join(" · ").toLowerCase(), W - 28, H - 30);
       c.globalAlpha = 1; c.textAlign = "left";
     },
     homelab(c, W, H, r, p, BK, WH) {
@@ -1884,6 +1917,294 @@ const Shelf = (() => {
   return {
     show(list) { el.hidden = false; build(list); },
     hide() { el.hidden = true; cancelAnimationFrame(raf); raf = 0; drag = null; },
+  };
+})();
+
+/* =========================================================
+   LAB DEMO: a live path tracer.
+   The Cornell Box from the GPU path tracer project, traced in a WebGL2 fragment
+   shader at one sample per pixel per frame and averaged into a float texture
+   (ping-pong between two). "Naive" only counts light a path happens to run into;
+   "NEE" (next-event estimation) also sends a shadow ray to a random point on the
+   lamp at every diffuse bounce. Both are unbiased, so they converge to the same
+   picture, but NEE gets there with far less noise. "Split" runs one per half.
+   ========================================================= */
+const Tracer = (() => {
+  const MAX_SPP = 2048;
+  const MODES = [["naive", "Naive"], ["split", "Split"], ["nee", "NEE"]];
+  let root = null, cv = null, sppEl = null, gl = null, io = null;
+  let progT = null, progD = null, tex = [], fbo = [], cur = 0, spp = 0, size = 0;
+  let ldr = false, ok = false, failed = false, mounted = false, onScreen = true, raf = 0, mode = "split";
+
+  const VS = `#version 300 es
+in vec2 a;
+void main() { gl_Position = vec4(a, 0.0, 1.0); }`;
+
+  const TONE = `vec3 tone(vec3 c) { return pow(1.0 - exp(-c * 1.4), vec3(1.0 / 2.2)); }`;
+
+  const FS_TRACE = `#version 300 es
+precision highp float;
+precision highp int;
+uniform sampler2D uPrev;
+uniform float uSize, uSpp, uSplit;     // uSplit: where NEE starts, as a fraction of the width (1 = all naive)
+uniform bool uLDR;
+out vec4 o;
+
+const float PI = 3.14159265, R = 0.42, LS = 0.22, LAREA = 4.0 * LS * LS;
+const vec3 LE = vec3(17.0, 12.0, 4.0);                   // the lamp: a warm 0.44 square in the ceiling
+const vec3 S1 = vec3(-0.43, 0.42, -0.34);                // matte sphere
+const vec3 S2 = vec3(0.45, 0.42, 0.28);                  // mirror sphere
+${TONE}
+
+uint seed;
+uint pcg(uint v) { uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
+float rnd() { seed = pcg(seed); return float(seed) * (1.0 / 4294967296.0); }
+
+float sphere(vec3 ro, vec3 rd, vec3 c) {
+  vec3 oc = ro - c;
+  float b = dot(oc, rd), h = b * b - dot(oc, oc) + R * R;
+  if (h < 0.0) return 1e9;
+  float t = -b - sqrt(h);                                // rays never start inside a sphere
+  return t > 1e-4 ? t : 1e9;
+}
+
+/* one wall of the box [-1,1] x [0,2] x [-1,1] (open at z = +1); side is the sign of its inward normal */
+void wall(vec3 ro, vec3 rd, int ax, float at, float side, int mat, inout float t, inout vec3 n, inout int m) {
+  float d = rd[ax];
+  if (d * side >= 0.0) return;
+  float s = (at - ro[ax]) / d;
+  if (s <= 1e-4 || s >= t) return;
+  vec3 p = ro + rd * s;
+  if (any(greaterThan(abs(p - vec3(0.0, 1.0, 0.0)), vec3(1.0001)))) return;
+  t = s; n = vec3(0.0); n[ax] = side; m = mat;
+  if (ax == 1 && side < 0.0 && abs(p.x) < LS && abs(p.z) < LS) m = 4;
+}
+
+/* materials: 0 nothing (out through the open front), 1 white, 2 red, 3 green, 4 lamp, 5 mirror */
+float hit(vec3 ro, vec3 rd, out vec3 n, out int m) {
+  float t = 1e9; n = vec3(0.0); m = 0;
+  wall(ro, rd, 1, 0.0, 1.0, 1, t, n, m);                 // floor
+  wall(ro, rd, 1, 2.0, -1.0, 1, t, n, m);                // ceiling, with the lamp in it
+  wall(ro, rd, 2, -1.0, 1.0, 1, t, n, m);                // back
+  wall(ro, rd, 0, -1.0, 1.0, 2, t, n, m);                // left, red
+  wall(ro, rd, 0, 1.0, -1.0, 3, t, n, m);                // right, green
+  float s = sphere(ro, rd, S1); if (s < t) { t = s; n = (ro + rd * s - S1) / R; m = 1; }
+  s = sphere(ro, rd, S2);       if (s < t) { t = s; n = (ro + rd * s - S2) / R; m = 5; }
+  return t;
+}
+
+vec3 albedo(int m) { return m == 2 ? vec3(0.63, 0.065, 0.05) : m == 3 ? vec3(0.14, 0.45, 0.091) : vec3(0.73); }
+
+vec3 cosineDir(vec3 n) {
+  float a = 2.0 * PI * rnd(), r2 = rnd(), r = sqrt(r2);
+  vec3 t = normalize(cross(n, abs(n.x) > 0.5 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+  return normalize(t * cos(a) * r + cross(n, t) * sin(a) * r + n * sqrt(1.0 - r2));
+}
+
+vec3 trace(vec3 ro, vec3 rd, bool nee) {
+  vec3 L = vec3(0.0), T = vec3(1.0);
+  bool spec = true;                                      // camera and mirror rays still see the lamp directly
+  for (int b = 0; b < 8; b++) {
+    vec3 n; int m;
+    float t = hit(ro, rd, n, m);
+    if (m == 0) break;
+    vec3 p = ro + rd * t;
+    if (m == 4) { if (!nee || spec) L += T * LE; break; } // with NEE, diffuse hits on the lamp were already counted
+    if (m == 5) { ro = p + n * 1e-4; rd = reflect(rd, n); T *= 0.92; spec = true; continue; }
+    vec3 c = albedo(m);
+    if (nee) {                                           // shadow ray to a random point on the lamp
+      vec3 q = vec3((rnd() * 2.0 - 1.0) * LS, 2.0, (rnd() * 2.0 - 1.0) * LS);
+      vec3 l = q - p; float d2 = dot(l, l), d = sqrt(d2); l /= d;
+      float cx = dot(n, l), cl = l.y;
+      vec3 o2 = p + n * 1e-4;
+      if (cx > 0.0 && cl > 0.0 && sphere(o2, l, S1) > d && sphere(o2, l, S2) > d)
+        L += T * c / PI * LE * cx * cl / d2 * LAREA;
+    }
+    ro = p + n * 1e-4; rd = cosineDir(n); T *= c; spec = false;
+    if (b > 2) { float k = max(T.r, max(T.g, T.b)); if (rnd() > k) break; T /= k; }   // Russian roulette
+  }
+  return L;
+}
+
+void main() {
+  ivec2 px = ivec2(gl_FragCoord.xy);
+  seed = pcg(uint(px.x) * 1973u + uint(px.y) * 9277u + uint(uSpp) * 26699u) | 1u;
+  vec2 uv = (gl_FragCoord.xy + vec2(rnd(), rnd()) - 0.5) / uSize * 2.0 - 1.0;
+  vec3 c = trace(vec3(0.0, 1.0, 3.85), normalize(vec3(uv * 0.351, -1.0)), gl_FragCoord.x >= uSplit * uSize);
+  if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+  if (uLDR) c = tone(c);
+  vec3 prev = uSpp > 0.0 ? texelFetch(uPrev, px, 0).rgb : vec3(0.0);
+  o = vec4(mix(prev, c, 1.0 / (uSpp + 1.0)), 1.0);
+}`;
+
+  const FS_SHOW = `#version 300 es
+precision highp float;
+uniform sampler2D uAcc;
+uniform float uSize, uSplit;
+uniform bool uLDR;
+out vec4 o;
+${TONE}
+void main() {
+  vec3 c = texelFetch(uAcc, ivec2(gl_FragCoord.xy), 0).rgb;
+  if (!uLDR) c = tone(c);
+  if (uSplit > 0.0 && uSplit < 1.0 && floor(gl_FragCoord.x) == floor(uSplit * uSize)) c = mix(c, vec3(1.0), 0.7);
+  o = vec4(c, 1.0);
+}`;
+
+  const split = () => mode === "naive" ? 1 : mode === "nee" ? 0 : 0.5;
+
+  function program(fs, names) {
+    const p = gl.createProgram();
+    for (const [type, src] of [[gl.VERTEX_SHADER, VS], [gl.FRAGMENT_SHADER, fs]]) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS) && !gl.isContextLost()) throw new Error(gl.getShaderInfoLog(s));
+      gl.attachShader(p, s);
+    }
+    gl.bindAttribLocation(p, 0, "a"); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS) && !gl.isContextLost()) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}; names.forEach(n => u[n] = gl.getUniformLocation(p, n));
+    return { p, u };
+  }
+
+  /* two accumulation targets; float if the GPU can render to it, otherwise 8-bit (averaging already tone-mapped colour) */
+  function targets() {
+    tex.forEach(t => gl.deleteTexture(t)); fbo.forEach(f => gl.deleteFramebuffer(f));
+    tex = []; fbo = [];
+    let complete = true;
+    for (let i = 0; i < 2; i++) {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      if (ldr) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, size, size, 0, gl.RGBA, gl.FLOAT, null);
+      const f = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+      complete = complete && gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+      tex.push(t); fbo.push(f);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!complete && !ldr) { ldr = true; return targets(); }
+    cur = 0; spp = 0;
+  }
+
+  function init() {
+    ok = false;
+    try {
+      gl = gl || cv.getContext("webgl2", { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: "high-performance" });
+      if (!gl) return false;
+      ldr = !gl.getExtension("EXT_color_buffer_float");
+      progT = program(FS_TRACE, ["uPrev", "uSize", "uSpp", "uSplit", "uLDR"]);
+      progD = program(FS_SHOW, ["uAcc", "uSize", "uSplit", "uLDR"]);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);   // one big triangle
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      targets();
+      ok = !gl.isContextLost();
+    } catch (err) { console.warn("Path tracer demo:", err); }
+    return ok;
+  }
+
+  function pass() {
+    const dst = cur ^ 1;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo[dst]);
+    gl.viewport(0, 0, size, size);
+    gl.useProgram(progT.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[cur]);
+    gl.uniform1i(progT.u.uPrev, 0); gl.uniform1f(progT.u.uSize, size); gl.uniform1f(progT.u.uSpp, spp);
+    gl.uniform1f(progT.u.uSplit, split()); gl.uniform1i(progT.u.uLDR, ldr ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    cur = dst; spp++;
+  }
+
+  function show() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, size, size);
+    gl.useProgram(progD.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[cur]);
+    gl.uniform1i(progD.u.uAcc, 0); gl.uniform1f(progD.u.uSize, size);
+    gl.uniform1f(progD.u.uSplit, split()); gl.uniform1i(progD.u.uLDR, ldr ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    sppEl.textContent = `${String(spp).padStart(4, "0")} spp`;
+  }
+
+  function frame() {
+    raf = 0;
+    if (!mounted || !ok || gl.isContextLost() || spp >= MAX_SPP) return;
+    pass(); show();
+    if (onScreen) raf = requestAnimationFrame(frame);
+  }
+  const kick = () => { if (!raf && mounted && ok && onScreen && spp < MAX_SPP) raf = requestAnimationFrame(frame); };
+  const restart = () => { if (!ok) return; spp = 0; kick(); };
+
+  function fail() {
+    failed = true;
+    root.innerHTML = `<p class="demo-note">This demo needs WebGL2, which isn't available in this browser.</p>`;
+  }
+
+  function build() {
+    root = document.createElement("div");
+    root.className = "demo is-split";
+    root.innerHTML = `
+      <div class="demo-view">
+        <canvas width="2" height="2" role="img" aria-label="A path-traced Cornell Box: a red wall on the left, a green wall on the right, a matte sphere and a mirror sphere, lit by a square lamp in the ceiling"></canvas>
+        <span class="demo-tag l">Naive</span><span class="demo-tag r">NEE</span>
+      </div>
+      <div class="demo-bar">
+        <div class="demo-seg" role="group" aria-label="Light sampling">${MODES.map(([k, l]) => `<button type="button" data-m="${k}" aria-pressed="${k === mode}">${l}</button>`).join("")}</div>
+        <span class="demo-spp">0000 spp</span>
+        <button type="button" class="demo-restart">Restart</button>
+      </div>`;
+    cv = root.querySelector("canvas"); sppEl = root.querySelector(".demo-spp");
+    root.querySelector(".demo-seg").addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b || b.dataset.m === mode) return;
+      mode = b.dataset.m;
+      root.querySelectorAll(".demo-seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      root.classList.toggle("is-split", mode === "split");
+      restart();
+    });
+    root.querySelector(".demo-restart").addEventListener("click", restart);
+    cv.addEventListener("webglcontextlost", e => { e.preventDefault(); ok = false; cancelAnimationFrame(raf); raf = 0; });
+    cv.addEventListener("webglcontextrestored", () => { if (init()) kick(); });
+    io = new IntersectionObserver(es => { onScreen = es[es.length - 1].isIntersecting; kick(); });
+    new ResizeObserver(fit).observe(cv);
+  }
+
+  /* render at the canvas's on-screen pixel size (capped); start over only when that changes */
+  function fit() {
+    if (!mounted || failed || !cv.clientWidth) return;
+    const want = Math.max(192, Math.min(512, Math.round(cv.clientWidth * Math.min(devicePixelRatio || 1, 2))));
+    if (want === size) return;
+    size = want; cv.width = cv.height = size;
+    if (ok) { targets(); kick(); }
+  }
+
+  return {
+    mount(slot) {
+      if (!root) build();
+      slot.append(root);
+      mounted = true;
+      if (failed) return;
+      fit();
+      if (!size) { size = 384; cv.width = cv.height = size; }   // not laid out yet; the ResizeObserver corrects it
+      if (!ok) {
+        if (gl && gl.isContextLost()) return;   // the GPU dropped it; "webglcontextrestored" brings it back
+        if (!init()) { fail(); return; }
+      }
+      io.observe(cv);
+      if (spp) show();   // put back what was already accumulated
+      kick();
+    },
+    unmount() {
+      mounted = false;
+      cancelAnimationFrame(raf); raf = 0;
+      if (io) io.disconnect();
+    },
   };
 })();
 
